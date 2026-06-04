@@ -1,0 +1,227 @@
+import { requireCoachTeam } from "@/lib/auth";
+import { getPlayersWithGuardians } from "@/lib/data";
+import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
+import type { PlayerWithGuardians, Guardian } from "@/lib/types";
+import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer } from "./actions";
+
+function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
+  return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
+}
+
+function PlayerForm({ player }: { player?: PlayerWithGuardians }) {
+  const g = player ? primaryGuardian(player) : undefined;
+  return (
+    <Card>
+      <SectionTitle>{player ? "Edit player" : "Add player"}</SectionTitle>
+      <form action={upsertPlayer} className="space-y-4">
+        {player && <input type="hidden" name="id" value={player.id} />}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First name" name="first_name" required>
+            <input id="first_name" name="first_name" required className="input" defaultValue={player?.first_name ?? ""} />
+          </Field>
+          <Field label="Last name" name="last_name" required>
+            <input id="last_name" name="last_name" required className="input" defaultValue={player?.last_name ?? ""} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Jersey #" name="jersey_number">
+            <input id="jersey_number" name="jersey_number" className="input" defaultValue={player?.jersey_number ?? ""} />
+          </Field>
+          <Field label="Preferred position" name="preferred_position">
+            <input id="preferred_position" name="preferred_position" className="input" defaultValue={player?.preferred_position ?? ""} />
+          </Field>
+        </div>
+        <Field label="Strong foot" name="strong_foot">
+          <select id="strong_foot" name="strong_foot" className="input" defaultValue={player?.strong_foot ?? ""}>
+            <option value="">Unset</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="both">Both</option>
+          </select>
+        </Field>
+        <Field label="Allergies" name="allergies">
+          <input id="allergies" name="allergies" className="input" defaultValue={player?.allergies ?? ""} />
+        </Field>
+        <Field label="Medical notes" name="medical_notes">
+          <textarea id="medical_notes" name="medical_notes" className="input" rows={2} defaultValue={player?.medical_notes ?? ""} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Emergency contact name" name="emergency_contact_name">
+            <input id="emergency_contact_name" name="emergency_contact_name" className="input" defaultValue={player?.emergency_contact_name ?? ""} />
+          </Field>
+          <Field label="Emergency contact phone" name="emergency_contact_phone">
+            <input id="emergency_contact_phone" name="emergency_contact_phone" className="input" defaultValue={player?.emergency_contact_phone ?? ""} />
+          </Field>
+        </div>
+        <Field label="Coach notes (private)" name="coach_notes">
+          <textarea id="coach_notes" name="coach_notes" className="input" rows={2} defaultValue={player?.coach_notes ?? ""} />
+        </Field>
+
+        <div className="border-t border-slate-200 pt-3">
+          <SectionTitle>Primary guardian</SectionTitle>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Name" name="guardian1_name">
+                <input id="guardian1_name" name="guardian1_name" className="input" defaultValue={g?.name ?? ""} />
+              </Field>
+              <Field label="Phone" name="guardian1_phone">
+                <input id="guardian1_phone" name="guardian1_phone" className="input" defaultValue={g?.phone ?? ""} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Email" name="guardian1_email">
+                <input id="guardian1_email" name="guardian1_email" type="email" className="input" defaultValue={g?.email ?? ""} />
+              </Field>
+              <Field label="Relationship" name="guardian1_relationship">
+                <input id="guardian1_relationship" name="guardian1_relationship" className="input" defaultValue={g?.relationship ?? ""} />
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button type="submit">{player ? "Save changes" : "Add player"}</Button>
+          <Button href="/team/roster" variant="ghost">Cancel</Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+export default async function RosterPage({ searchParams }: { searchParams: { edit?: string; add?: string } }) {
+  const { team } = await requireCoachTeam();
+  const players = await getPlayersWithGuardians(team.id);
+
+  const pending = players.filter((p) => p.status === "pending");
+  const approved = players
+    .filter((p) => p.status === "approved")
+    .sort((a, b) => {
+      const ja = a.jersey_number ? parseInt(a.jersey_number, 10) : Number.MAX_SAFE_INTEGER;
+      const jb = b.jersey_number ? parseInt(b.jersey_number, 10) : Number.MAX_SAFE_INTEGER;
+      if (ja !== jb) return ja - jb;
+      return a.first_name.localeCompare(b.first_name);
+    });
+
+  const editPlayer = searchParams.edit
+    ? players.find((p) => p.id === searchParams.edit)
+    : undefined;
+  const showAdd = searchParams.add === "1";
+
+  return (
+    <div className="space-y-5">
+      <PageTitle
+        title="Roster"
+        subtitle={`${approved.length} player${approved.length === 1 ? "" : "s"}`}
+        action={!showAdd && !editPlayer ? <Button href="/team/roster?add=1">+ Add player</Button> : undefined}
+      />
+
+      {editPlayer && <PlayerForm player={editPlayer} />}
+      {showAdd && !editPlayer && <PlayerForm />}
+
+      {pending.length > 0 && (
+        <div>
+          <SectionTitle>Pending approval</SectionTitle>
+          <div className="space-y-3">
+            {pending.map((p) => {
+              const g = primaryGuardian(p);
+              return (
+                <Card key={p.id} className="border-amber-200 bg-amber-50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">
+                        {p.jersey_number ? `#${p.jersey_number} ` : ""}{p.first_name} {p.last_name}
+                      </p>
+                      {g && <p className="text-sm text-slate-600">{g.name}{g.phone ? ` · ${g.phone}` : ""}</p>}
+                      {p.allergies && <p className="mt-1 text-sm text-rose-700">Allergies: {p.allergies}</p>}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <form action={approvePlayer}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <Button type="submit">Approve</Button>
+                    </form>
+                    <form action={rejectPlayer}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <Button type="submit" variant="danger">Reject</Button>
+                    </form>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <SectionTitle>Roster</SectionTitle>
+        {approved.length === 0 ? (
+          <EmptyState title="No players yet" hint="Add a player or share your invite link." />
+        ) : (
+          <div className="space-y-3">
+            {approved.map((p) => (
+              <Card key={p.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-lg font-semibold">
+                      {p.jersey_number ? <span className="text-brand-600">#{p.jersey_number} </span> : null}
+                      {p.first_name} {p.last_name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {[p.preferred_position, p.strong_foot ? `${p.strong_foot} foot` : null]
+                        .filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  {p.allergies && <Badge color="red">Allergy</Badge>}
+                </div>
+
+                <div className="mt-3 space-y-1 text-sm text-slate-700">
+                  {p.guardians.length > 0 ? (
+                    p.guardians.map((g) => (
+                      <div key={g.id}>
+                        <span className="font-medium">{g.name}</span>
+                        {g.relationship ? <span className="text-slate-500"> ({g.relationship})</span> : null}
+                        {g.is_primary ? <span className="text-slate-400"> · primary</span> : null}
+                        <div className="text-slate-500">
+                          {[g.phone, g.email].filter(Boolean).join(" · ") || "no contact"}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400">No guardian on file</p>
+                  )}
+                </div>
+
+                {(p.allergies || p.medical_notes) && (
+                  <div className="mt-3 rounded-lg bg-rose-50 p-2 text-sm text-rose-800">
+                    {p.allergies && <p>Allergies: {p.allergies}</p>}
+                    {p.medical_notes && <p>Medical: {p.medical_notes}</p>}
+                  </div>
+                )}
+
+                {(p.emergency_contact_name || p.emergency_contact_phone) && (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Emergency: {[p.emergency_contact_name, p.emergency_contact_phone].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+
+                {p.coach_notes && (
+                  <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-600">
+                    Coach notes: {p.coach_notes}
+                  </p>
+                )}
+
+                <div className="mt-3 flex gap-2">
+                  <Button href={`/team/roster?edit=${p.id}`} variant="secondary">Edit</Button>
+                  <form action={deletePlayer}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <Button type="submit" variant="danger">Delete</Button>
+                  </form>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
