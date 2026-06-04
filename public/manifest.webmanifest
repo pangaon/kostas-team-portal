@@ -2,7 +2,7 @@
   "name": "Kostas Team Portal",
   "short_name": "Team Portal",
   "description": "Schedule, attendance, snacks and announcements for the team.",
-  "start_url": "/parent",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
