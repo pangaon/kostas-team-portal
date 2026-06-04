@@ -112,6 +112,7 @@ export default async function Dashboard() {
           <Button href="/team/attendance" variant="secondary">✅ Attendance</Button>
           <Button href="/team/announcements" variant="secondary">📣 Announce</Button>
           <Button href="/team/messages" variant="secondary">💬 Messages</Button>
+          <Button href="/parent" variant="secondary">👨‍👧 My kid (parent view)</Button>
         </div>
       </div>
 

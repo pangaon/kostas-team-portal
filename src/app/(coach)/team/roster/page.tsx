@@ -111,7 +111,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
     <div className="space-y-5">
       <PageTitle
         title="Roster"
-        subtitle={`${approved.length} player${approved.length === 1 ? "" : "s"}`}
+        subtitle={`${approved.length} player${approved.length === 1 ? "" : "s"} · ${approved.filter((p) => p.claimed).length} joined`}
         action={!showAdd && !editPlayer ? <Button href="/team/roster?add=1">+ Add player</Button> : undefined}
       />
 
@@ -171,7 +171,10 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                         .filter(Boolean).join(" · ")}
                     </p>
                   </div>
-                  {p.allergies && <Badge color="red">Allergy</Badge>}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {p.claimed ? <Badge color="green">✓ Joined</Badge> : <Badge color="slate">Not joined</Badge>}
+                    {p.allergies && <Badge color="red">Allergy</Badge>}
+                  </div>
                 </div>
 
                 <div className="mt-3 space-y-1 text-sm text-slate-700">

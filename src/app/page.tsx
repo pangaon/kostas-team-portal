@@ -6,11 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export default async function BadoniLanding() {
-  const parent = await getParentSession();
-  if (parent) redirect("/parent");
+  // Coaches (even if they also claimed their own child) land on their dashboard first.
   const supabase = createClient();
   const { data } = await supabase.auth.getUser();
   if (data.user) redirect("/dashboard");
+  const parent = await getParentSession();
+  if (parent) redirect("/parent");
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
