@@ -45,7 +45,7 @@ const variants = {
   danger: "border border-rose-200 bg-white text-rose-600 hover:bg-rose-50",
 };
 export function Button({ children, href, type = "button", variant = "primary", className = "", name, value, disabled }: BtnProps) {
-  const cls = `inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold transition disabled:opacity-50 ${variants[variant]} ${className}`;
+  const cls = `inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold transition disabled:opacity-50 active:scale-[0.97] ${variants[variant]} ${className}`;
   if (href) return <Link href={href} className={cls}>{children}</Link>;
   return <button type={type} name={name} value={value} disabled={disabled} className={cls}>{children}</button>;
 }

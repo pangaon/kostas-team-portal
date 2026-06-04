@@ -18,3 +18,14 @@ button, a, input, select, textarea { touch-action: manipulation; }
   .label { @apply mb-1 block text-sm font-medium text-slate-700; }
   .card  { @apply rounded-2xl border border-slate-200 bg-white p-4 shadow-sm; }
 }
+
+/* ---- Motion & polish ---- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pop { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: fadeUp .28s cubic-bezier(.2,.7,.3,1) both; }
+  main > * { animation: fadeUp .3s cubic-bezier(.2,.7,.3,1) both; }
+}
+a, button, .input, select, textarea { transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease; }
+button:active, a:active { transform: scale(.975); }
+.card:hover { box-shadow: 0 6px 20px -8px rgba(15,23,42,.12); }

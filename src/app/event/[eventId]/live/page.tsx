@@ -4,7 +4,7 @@ import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster }
 import { Card, SectionTitle, Badge, Button } from "@/components/ui";
 import { BackBar } from "@/components/BackBar";
 import { fmtDate, fmtTime } from "@/lib/format";
-import { incScore, logGoalLive, undoGoalLive, addGameNote, toggleOnField } from "./actions";
+import { incScore, logGoalLive, undoGoalLive, addGameNote, toggleOnField, setPosition } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +18,9 @@ export default async function LiveGame({ params }: { params: { eventId: string }
   ]);
   const approved = players.filter((p) => p.status === "approved");
   const statusOf = new Map(roster.map((r) => [r.player_id, r.status]));
+  const posOf = new Map(roster.map((r) => [r.player_id, r.position || ""]));
+  const POSITIONS = ["GK", "DEF", "MID", "FWD"];
+  const posCount = (code: string) => onField.filter((p) => posOf.get(p.id) === code).length;
   const onField = approved.filter((p) => statusOf.get(p.id) === "starter");
   const bench = approved.filter((p) => statusOf.get(p.id) !== "starter");
   const nameOf = (id: string | null) => {
@@ -81,25 +84,50 @@ export default async function LiveGame({ params }: { params: { eventId: string }
         )}
       </div>
 
-      {/* ON FIELD / SUBS */}
+      {/* ON FIELD — positions + goalie */}
       <div className="mt-5">
-        <SectionTitle>On the field ({onField.length}) — tap to sub</SectionTitle>
-        <div className="flex flex-wrap gap-2">
-          {[...onField, ...bench].map((p) => {
-            const on = statusOf.get(p.id) === "starter";
+        <SectionTitle>On the field ({onField.length}/8)</SectionTitle>
+        <p className="mb-2 text-xs text-slate-500">🧤 GK {posCount("GK")} · DEF {posCount("DEF")} · MID {posCount("MID")} · FWD {posCount("FWD")}</p>
+        <div className="space-y-2">
+          {onField.map((p) => {
+            const pos = posOf.get(p.id) || "";
             return (
+              <div key={p.id} className={`flex items-center gap-2 rounded-xl border p-2 ${pos === "GK" ? "border-amber-300 bg-amber-50" : "border-slate-200"}`}>
+                <span className="flex-1 text-sm font-medium">{pos === "GK" ? "🧤 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}</span>
+                <form action={setPosition} className="flex items-center gap-1">
+                  <input type="hidden" name="event_id" value={event.id} />
+                  <input type="hidden" name="player_id" value={p.id} />
+                  <select name="position" defaultValue={pos} className="input py-1 text-sm">
+                    <option value="">pos</option>
+                    {POSITIONS.map((x) => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                  <button className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">set</button>
+                </form>
+                <form action={toggleOnField}>
+                  <input type="hidden" name="event_id" value={event.id} />
+                  <input type="hidden" name="player_id" value={p.id} />
+                  <input type="hidden" name="current" value="starter" />
+                  <button className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">sub off</button>
+                </form>
+              </div>
+            );
+          })}
+          {onField.length === 0 && <p className="text-sm text-slate-400">No one on the field yet — bring players on from the bench below (set your goalie first).</p>}
+        </div>
+        <div className="mt-3">
+          <SectionTitle>Bench — tap to bring on</SectionTitle>
+          <div className="flex flex-wrap gap-2">
+            {bench.map((p) => (
               <form key={p.id} action={toggleOnField}>
                 <input type="hidden" name="event_id" value={event.id} />
                 <input type="hidden" name="player_id" value={p.id} />
-                <input type="hidden" name="current" value={on ? "starter" : "bench"} />
-                <button className={`rounded-full px-3 py-2 text-sm font-medium ${on ? "bg-brand-600 text-white" : "border border-slate-300 text-slate-600"}`}>
-                  {p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}
-                </button>
+                <input type="hidden" name="current" value="bench" />
+                <button className="rounded-full border border-slate-300 px-3 py-2 text-sm">+ {p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}</button>
               </form>
-            );
-          })}
+            ))}
+            {bench.length === 0 && <p className="text-sm text-slate-400">Everyone is on the field.</p>}
+          </div>
         </div>
-        <p className="mt-1 text-xs text-slate-400">Blue = on field. Tap a benched player to bring on / tap an on-field player to sub off.</p>
       </div>
 
       {/* NOTES */}

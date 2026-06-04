@@ -83,3 +83,17 @@ export async function toggleOnField(formData: FormData) {
   );
   rev(event_id);
 }
+
+export async function setPosition(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const event_id = String(formData.get("event_id") || "");
+  const player_id = String(formData.get("player_id") || "");
+  const position = String(formData.get("position") || "");
+  if (!event_id || !player_id) return;
+  const db = createAdminClient();
+  await db.from("game_roster").upsert(
+    { team_id: team.id, event_id, player_id, position, status: "starter" },
+    { onConflict: "event_id,player_id" }
+  );
+  rev(event_id);
+}
