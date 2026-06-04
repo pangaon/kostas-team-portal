@@ -8,10 +8,11 @@ export async function saveResult(formData: FormData) {
   const event_id = String(formData.get("event_id") || "");
   const our_score = parseInt(String(formData.get("our_score") || "0"), 10) || 0;
   const opp_score = parseInt(String(formData.get("opp_score") || "0"), 10) || 0;
+  const notes = String(formData.get("notes") || "").trim().slice(0, 5000) || null;
   if (!event_id) return;
   const db = createAdminClient();
   await db.from("match_results").upsert(
-    { team_id: team.id, event_id, our_score, opp_score },
+    { team_id: team.id, event_id, our_score, opp_score, notes },
     { onConflict: "event_id" }
   );
   revalidatePath("/team/season");

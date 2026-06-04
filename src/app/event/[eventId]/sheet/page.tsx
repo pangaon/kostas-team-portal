@@ -1,3 +1,4 @@
+import { BackBar } from "@/components/BackBar";
 import { notFound } from "next/navigation";
 import { requireCoachTeam } from "@/lib/auth";
 import { getEvent, getPlayersWithGuardians, getGameRoster, getVolunteers, getAttendance } from "@/lib/data";
@@ -65,6 +66,7 @@ export default async function GameSheetPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-5">
+      <BackBar />
       <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
 
       <div className="print:hidden mb-4 flex items-center justify-between">

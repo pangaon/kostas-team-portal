@@ -1,3 +1,4 @@
+import { BackBar } from "@/components/BackBar";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getParentSession } from "@/lib/parent";
@@ -92,6 +93,7 @@ export default async function EventDetailPage({
   if (!session || event.team_id !== session.team.id) {
     return (
       <main className="mx-auto w-full max-w-md space-y-4 px-4 py-8">
+        <BackBar href="/" label="Home" />
         <Card>
           <EventHeader e={event} />
         </Card>
@@ -181,6 +183,7 @@ export default async function EventDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-md space-y-4 px-4 py-8">
+        <BackBar href="/" label="Home" />
       <Card>
         <EventHeader e={event} />
       </Card>

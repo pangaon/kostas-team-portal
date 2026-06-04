@@ -102,7 +102,9 @@ export default async function SeasonPage() {
                   <input type="hidden" name="event_id" value={g.id} />
                   <div><label className="label text-xs">Us</label><input name="our_score" type="number" min="0" defaultValue={r?.our_score ?? 0} className="input w-16 py-2" /></div>
                   <div><label className="label text-xs">Them</label><input name="opp_score" type="number" min="0" defaultValue={r?.opp_score ?? 0} className="input w-16 py-2" /></div>
-                  <Button type="submit" variant="secondary" className="py-2">Save score</Button>
+                  <Button type="submit" variant="secondary" className="py-2">Save</Button>
+                  <Button href={`/event/${g.id}/live`} variant="ghost" className="py-2">▶ Live</Button>
+                  <textarea name="notes" rows={1} defaultValue={r?.notes ?? ""} placeholder="Game notes…" className="input ml-auto w-full py-2" />
                 </form>
                 <div className="mt-3">
                   {gGoals.map((ge) => (

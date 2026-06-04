@@ -1,0 +1,148 @@
+import { notFound } from "next/navigation";
+import { requireCoachTeam } from "@/lib/auth";
+import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster } from "@/lib/data";
+import { Card, SectionTitle, Badge, Button } from "@/components/ui";
+import { BackBar } from "@/components/BackBar";
+import { fmtDate, fmtTime } from "@/lib/format";
+import { incScore, logGoalLive, undoGoalLive, addGameNote, toggleOnField } from "./actions";
+
+export const dynamic = "force-dynamic";
+
+export default async function LiveGame({ params }: { params: { eventId: string } }) {
+  const { team } = await requireCoachTeam();
+  const event = await getEvent(params.eventId);
+  if (!event || event.team_id !== team.id) notFound();
+
+  const [result, goals, players, roster] = await Promise.all([
+    getResult(event.id), getGoals(event.id), getPlayersWithGuardians(team.id), getGameRoster(event.id),
+  ]);
+  const approved = players.filter((p) => p.status === "approved");
+  const statusOf = new Map(roster.map((r) => [r.player_id, r.status]));
+  const onField = approved.filter((p) => statusOf.get(p.id) === "starter");
+  const bench = approved.filter((p) => statusOf.get(p.id) !== "starter");
+  const nameOf = (id: string | null) => {
+    const p = approved.find((x) => x.id === id);
+    return p ? `${p.first_name}${p.jersey_number ? " #" + p.jersey_number : ""}` : "Unassigned";
+  };
+  const us = result?.our_score ?? 0;
+  const them = result?.opp_score ?? 0;
+  const noteLines = (result?.notes ?? "").split("\n").filter(Boolean);
+  const scorerPool = onField.length > 0 ? onField : approved;
+
+  return (
+    <main className="mx-auto max-w-md px-4 py-5">
+      <BackBar />
+      <h1 className="text-xl font-bold">{event.title || (event.opponent ? `vs ${event.opponent}` : "Game")}</h1>
+      <p className="text-sm text-slate-500">{fmtDate(event.start_time)} · {fmtTime(event.start_time)}{event.location ? ` · ${event.location}` : ""}</p>
+
+      {/* SCORE */}
+      <Card className="mt-4">
+        <div className="grid grid-cols-2 gap-3 text-center">
+          {(["us", "them"] as const).map((side) => (
+            <div key={side}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{side === "us" ? team.name : (event.opponent || "Them")}</p>
+              <p className="my-1 text-5xl font-bold">{side === "us" ? us : them}</p>
+              <div className="flex justify-center gap-2">
+                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="dec" /><button className="h-10 w-10 rounded-full border border-slate-300 text-lg">−</button></form>
+                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="inc" /><button className="h-10 w-10 rounded-full bg-brand-600 text-lg font-bold text-white">+</button></form>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* GOAL FOR US -> pick scorer (also bumps score) */}
+      <div className="mt-5">
+        <SectionTitle>⚽ Goal for us — tap the scorer</SectionTitle>
+        <div className="flex flex-wrap gap-2">
+          {scorerPool.map((p) => (
+            <form key={p.id} action={logGoalLive}>
+              <input type="hidden" name="event_id" value={event.id} />
+              <input type="hidden" name="player_id" value={p.id} />
+              <button className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                {p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}
+              </button>
+            </form>
+          ))}
+          <form action={logGoalLive}>
+            <input type="hidden" name="event_id" value={event.id} />
+            <button className="rounded-full border border-slate-300 px-3 py-2 text-sm">Unknown / own goal</button>
+          </form>
+        </div>
+        {goals.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {goals.map((g, i) => (
+              <div key={g.id} className="flex items-center justify-between text-sm">
+                <span>{i + 1}. ⚽ {nameOf(g.player_id)}</span>
+                <form action={undoGoalLive}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="id" value={g.id} /><button className="text-rose-500">undo</button></form>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ON FIELD / SUBS */}
+      <div className="mt-5">
+        <SectionTitle>On the field ({onField.length}) — tap to sub</SectionTitle>
+        <div className="flex flex-wrap gap-2">
+          {[...onField, ...bench].map((p) => {
+            const on = statusOf.get(p.id) === "starter";
+            return (
+              <form key={p.id} action={toggleOnField}>
+                <input type="hidden" name="event_id" value={event.id} />
+                <input type="hidden" name="player_id" value={p.id} />
+                <input type="hidden" name="current" value={on ? "starter" : "bench"} />
+                <button className={`rounded-full px-3 py-2 text-sm font-medium ${on ? "bg-brand-600 text-white" : "border border-slate-300 text-slate-600"}`}>
+                  {p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}
+                </button>
+              </form>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-xs text-slate-400">Blue = on field. Tap a benched player to bring on / tap an on-field player to sub off.</p>
+      </div>
+
+      {/* NOTES */}
+      <div className="mt-5">
+        <SectionTitle>Game notes (live)</SectionTitle>
+        <Card>
+          <form action={addGameNote} className="flex gap-2">
+            <input name="note" className="input py-2" placeholder="e.g. great save by keeper, 2nd half kickoff…" />
+            <Button type="submit" variant="secondary" className="py-2">Add</Button>
+          </form>
+          {noteLines.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-slate-700">
+              {noteLines.map((n, i) => <li key={i}>{n}</li>)}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      {/* SAFETY (collapsible) */}
+      <details className="mt-5">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-600">⚠️ Allergies &amp; emergency contacts</summary>
+        <Card className="mt-2">
+          <ul className="divide-y divide-slate-100 text-sm">
+            {approved.map((p) => {
+              const g = p.guardians?.[0];
+              return (
+                <li key={p.id} className="py-2">
+                  <span className="font-medium">{p.first_name} {p.last_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}</span>
+                  {p.allergies && <span className="ml-2 font-semibold text-rose-600">⚠ {p.allergies}</span>}
+                  <div className="text-xs text-slate-500">
+                    Emergency: {p.emergency_contact_name || g?.name || "—"} {p.emergency_contact_phone || g?.phone || ""}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      </details>
+
+      <div className="mt-5 flex gap-2">
+        <Button href={`/event/${event.id}/sheet`} variant="secondary">Printable sheet</Button>
+        <Button href="/team/season" variant="ghost">Season →</Button>
+      </div>
+    </main>
+  );
+}
