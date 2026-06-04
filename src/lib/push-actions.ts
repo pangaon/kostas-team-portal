@@ -23,3 +23,15 @@ export async function savePushSubscription(sub: Sub, userAgent?: string) {
   );
   return { ok: true };
 }
+
+// Saves the COACH's own device subscription (player_id null), so they can test/receive alerts.
+import { requireCoachTeam } from "@/lib/auth";
+export async function saveCoachPushSubscription(sub: Sub, userAgent?: string) {
+  const { team } = await requireCoachTeam();
+  const admin = createAdminClient();
+  await admin.from("push_subscriptions").upsert(
+    { team_id: team.id, player_id: null, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, user_agent: userAgent ?? null },
+    { onConflict: "endpoint" }
+  );
+  return { ok: true };
+}

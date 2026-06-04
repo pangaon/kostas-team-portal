@@ -42,7 +42,11 @@ export async function deleteAnnouncement(formData: FormData) {
   const db = createAdminClient();
   const id = s(formData, "id");
   if (!id) return;
+  const { data: ann } = await db.from("announcements").select("title").eq("id", id).eq("team_id", team.id).maybeSingle();
   await db.from("announcements").delete().eq("id", id).eq("team_id", team.id);
+  if (ann) {
+    await db.from("notifications").delete().eq("team_id", team.id).eq("kind", "announcement").eq("title", (ann as { title: string }).title);
+  }
   revalidatePath("/team/announcements");
   redirect("/team/announcements");
 }

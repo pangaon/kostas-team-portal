@@ -8,7 +8,8 @@ import { CopyButton } from "@/components/CopyButton";
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
 import { inviteLink } from "@/lib/whatsapp";
-import { createTeam } from "./actions";
+import { createTeam, sendTestAlert } from "./actions";
+import { CoachPushControls } from "@/components/CoachPushControls";
 
 export default async function Dashboard() {
   const { team } = await getCoachTeam();
@@ -112,6 +113,17 @@ export default async function Dashboard() {
           <Button href="/team/announcements" variant="secondary">📣 Announce</Button>
           <Button href="/team/messages" variant="secondary">💬 Messages</Button>
         </div>
+      </div>
+
+      <div>
+        <SectionTitle>Notifications</SectionTitle>
+        <Card>
+          <p className="text-sm text-slate-600">Alerts reach parents who turn them on. Enable them for your own device, then send a test to confirm.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <CoachPushControls />
+            <form action={sendTestAlert}><Button type="submit" variant="secondary">Send test alert</Button></form>
+          </div>
+        </Card>
       </div>
 
       <div>
