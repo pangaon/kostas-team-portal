@@ -128,10 +128,11 @@ export async function claimChild(formData: FormData) {
   if (!team) return;
   const teamId = (team as { id: string }).id;
   const { data: pl } = await db
-    .from("players").select("id,access_token,team_id").eq("id", playerId).maybeSingle();
-  if (!pl) return;
+    .from("players").select("id,access_token,team_id")
+    .eq("id", playerId).eq("team_id", teamId)
+    .eq("claimed", false).eq("status", "approved").maybeSingle();
+  if (!pl) return; // not found, wrong team, already claimed, or not approved
   const p = pl as { id: string; access_token: string; team_id: string };
-  if (p.team_id !== teamId) return;
   await db.from("players").update({ claimed: true }).eq("id", p.id);
   addChildCookie(p.access_token);
   redirect("/parent");

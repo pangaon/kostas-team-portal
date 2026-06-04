@@ -10,6 +10,9 @@ function s(formData: FormData, key: string): string {
 function nullable(v: string): string | null {
   return v === "" ? null : v;
 }
+function cap(v: string, n: number): string {
+  return v.slice(0, n);
+}
 
 // Confirm an event belongs to the active child's team before mutating.
 async function eventBelongs(
@@ -133,14 +136,14 @@ export async function addBlock(formData: FormData) {
   const db = createAdminClient();
   const start_date = s(formData, "start_date");
   const end_date = s(formData, "end_date");
-  if (!start_date || !end_date) return;
+  if (!start_date || !end_date || start_date > end_date) return;
 
   await db.from("availability_blocks").insert({
     team_id: session.team.id,
     player_id: session.player.id,
     start_date,
     end_date,
-    reason: nullable(s(formData, "reason")),
+    reason: nullable(cap(s(formData, "reason"), 160)),
   });
 
   revalidatePath("/parent/profile");
@@ -178,8 +181,8 @@ export async function postCarpool(formData: FormData) {
     player_id: session.player.id,
     kind,
     seats,
-    note: nullable(s(formData, "note")),
-    contact: nullable(s(formData, "contact")),
+    note: nullable(cap(s(formData, "note"), 280)),
+    contact: nullable(cap(s(formData, "contact"), 120)),
   });
 
   revalidatePath(`/event/${event_id}`);
@@ -211,15 +214,18 @@ export async function setVolunteer(formData: FormData) {
   const role = s(formData, "role");
   if (!role) return;
 
-  await db.from("volunteer_roles").upsert(
-    {
-      team_id: session.team.id,
-      event_id,
-      role,
-      player_id: session.player.id,
-    },
-    { onConflict: "event_id,role" }
-  );
+  const { data: existing } = await db
+    .from("volunteer_roles").select("id,player_id")
+    .eq("event_id", event_id).eq("role", role).maybeSingle();
+  const ex = existing as { id: string; player_id: string | null } | null;
+  if (ex && ex.player_id && ex.player_id !== session.player.id) return; // already taken
+  if (!ex) {
+    await db.from("volunteer_roles").insert({
+      team_id: session.team.id, event_id, role, player_id: session.player.id,
+    });
+  } else {
+    await db.from("volunteer_roles").update({ player_id: session.player.id }).eq("id", ex.id);
+  }
 
   revalidatePath(`/event/${event_id}`);
 }
@@ -271,7 +277,7 @@ export async function votePoll(formData: FormData) {
 export async function sendCoachNote(formData: FormData) {
   const sess = await getParentSession();
   if (!sess) return;
-  const body = s(formData, "body");
+  const body = s(formData, "body").slice(0, 3000);
   if (!body) return;
   const db = createAdminClient();
   await db.from("coach_inbox").insert({
