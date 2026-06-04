@@ -76,6 +76,7 @@ export async function joinTeam(
       emergency_contact_name: nullable(v.emergency_contact_name ?? ""),
       emergency_contact_phone: nullable(v.emergency_contact_phone ?? ""),
       status: "pending",
+      claimed: true,
     })
     .select("access_token,id")
     .single();
@@ -117,4 +118,21 @@ export async function joinTeam(
   addChildCookie(player.access_token);
 
   redirect(`/join/${inviteCode}/success`);
+}
+
+export async function claimChild(formData: FormData) {
+  const inviteCode = s(formData, "inviteCode");
+  const playerId = s(formData, "player_id");
+  const db = createAdminClient();
+  const { data: team } = await db.from("teams").select("id").eq("invite_code", inviteCode).maybeSingle();
+  if (!team) return;
+  const teamId = (team as { id: string }).id;
+  const { data: pl } = await db
+    .from("players").select("id,access_token,team_id").eq("id", playerId).maybeSingle();
+  if (!pl) return;
+  const p = pl as { id: string; access_token: string; team_id: string };
+  if (p.team_id !== teamId) return;
+  await db.from("players").update({ claimed: true }).eq("id", p.id);
+  addChildCookie(p.access_token);
+  redirect("/parent");
 }

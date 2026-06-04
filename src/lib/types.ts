@@ -12,7 +12,7 @@ export type Player = {
   jersey_number: string | null; allergies: string | null; medical_notes: string | null;
   emergency_contact_name: string | null; emergency_contact_phone: string | null;
   preferred_position: string | null; strong_foot: string | null; coach_notes: string | null;
-  status: PlayerStatus; access_token: string; created_at: string;
+  status: PlayerStatus; claimed: boolean; access_token: string; created_at: string;
 };
 export type Guardian = {
   id: string; player_id: string; team_id: string | null; name: string; phone: string | null;
@@ -67,7 +67,7 @@ export type VolunteerRole = {
   id: string; team_id: string; event_id: string; role: string;
   player_id: string | null; guardian_id: string | null; notes: string | null; created_at: string;
 };
-export const FORMATIONS = ["1-2-3-1", "2-3-1", "3-2-1", "2-2-2", "3-3", "2-1-2 (5v5)", "Custom"];
+export const FORMATIONS = ["3-3-1", "2-3-2", "3-2-2", "2-4-1", "3-1-3", "Custom"]; // 7 outfield + GK
 export const DEFAULT_VOLUNTEER_ROLES = ["Team Parent", "Field Setup", "Scorekeeper", "Half-time Oranges", "Pack-up Crew"];
 
 export type AvailabilityBlock = {
@@ -78,4 +78,28 @@ export type CarpoolPost = {
   id: string; team_id: string; event_id: string; player_id: string | null;
   kind: "offer" | "need"; seats: number | null; note: string | null;
   contact: string | null; created_at: string;
+};
+
+export type MatchResult = {
+  id: string; team_id: string; event_id: string; our_score: number; opp_score: number;
+  notes: string | null; updated_at: string;
+};
+export type GoalEvent = {
+  id: string; team_id: string; event_id: string; player_id: string | null;
+  assist_player_id: string | null; created_at: string;
+};
+export type Poll = {
+  id: string; team_id: string; title: string; status: "open" | "closed";
+  created_by: string | null; created_at: string;
+};
+export type PollOption = {
+  id: string; team_id: string; poll_id: string; label: string; location: string | null; sort: number; created_at: string;
+};
+export type PollVote = {
+  id: string; team_id: string; poll_id: string; option_id: string; player_id: string;
+  response: "yes" | "no" | "maybe"; updated_at: string;
+};
+export type CoachInboxNote = {
+  id: string; team_id: string; player_id: string | null; from_name: string | null;
+  body: string; is_read: boolean; created_at: string;
 };

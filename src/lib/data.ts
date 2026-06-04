@@ -72,3 +72,54 @@ export function nextEvent(events: TeamEvent[]): TeamEvent | null {
 export function originFromEnv(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
+
+import type {
+  MatchResult, GoalEvent, Poll, PollOption, PollVote, CoachInboxNote,
+} from "@/lib/types";
+
+export async function getResults(teamId: string): Promise<MatchResult[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("match_results").select("*").eq("team_id", teamId);
+  return (data as MatchResult[]) ?? [];
+}
+export async function getResult(eventId: string): Promise<MatchResult | null> {
+  const a = createAdminClient();
+  const { data } = await a.from("match_results").select("*").eq("event_id", eventId).maybeSingle();
+  return (data as MatchResult) ?? null;
+}
+export async function getSeasonGoals(teamId: string): Promise<GoalEvent[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("goal_events").select("*").eq("team_id", teamId);
+  return (data as GoalEvent[]) ?? [];
+}
+export async function getGoals(eventId: string): Promise<GoalEvent[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("goal_events").select("*").eq("event_id", eventId);
+  return (data as GoalEvent[]) ?? [];
+}
+export async function getPolls(teamId: string): Promise<Poll[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("polls").select("*").eq("team_id", teamId).order("created_at", { ascending: false });
+  return (data as Poll[]) ?? [];
+}
+export async function getPollOptions(pollId: string): Promise<PollOption[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("poll_options").select("*").eq("poll_id", pollId).order("sort");
+  return (data as PollOption[]) ?? [];
+}
+export async function getPollVotes(pollId: string): Promise<PollVote[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("poll_votes").select("*").eq("poll_id", pollId);
+  return (data as PollVote[]) ?? [];
+}
+export async function getInbox(teamId: string): Promise<CoachInboxNote[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("coach_inbox").select("*").eq("team_id", teamId).order("created_at", { ascending: false });
+  return (data as CoachInboxNote[]) ?? [];
+}
+export async function getUnclaimedPlayers(teamId: string) {
+  const a = createAdminClient();
+  const { data } = await a.from("players").select("id, first_name, last_name, jersey_number")
+    .eq("team_id", teamId).eq("status", "approved").eq("claimed", false).order("first_name");
+  return (data as { id: string; first_name: string; last_name: string; jersey_number: string | null }[]) ?? [];
+}

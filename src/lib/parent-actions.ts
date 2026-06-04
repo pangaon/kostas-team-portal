@@ -249,3 +249,36 @@ export async function switchChild(formData: FormData) {
   setActiveChild(token);
   revalidatePath("/parent");
 }
+
+// ---- Practice poll voting + message-coach (parent side) ----
+export async function votePoll(formData: FormData) {
+  const sess = await getParentSession();
+  if (!sess) return;
+  const option_id = s(formData, "option_id");
+  const poll_id = s(formData, "poll_id");
+  const response = s(formData, "response");
+  if (!option_id || !poll_id || !["yes", "no", "maybe"].includes(response)) return;
+  const db = createAdminClient();
+  const { data: poll } = await db.from("polls").select("team_id,status").eq("id", poll_id).maybeSingle();
+  if (!poll || (poll as { team_id: string }).team_id !== sess.team.id || (poll as { status: string }).status !== "open") return;
+  await db.from("poll_votes").upsert(
+    { team_id: sess.team.id, poll_id, option_id, player_id: sess.player.id, response },
+    { onConflict: "option_id,player_id" }
+  );
+  revalidatePath("/parent/coach");
+}
+
+export async function sendCoachNote(formData: FormData) {
+  const sess = await getParentSession();
+  if (!sess) return;
+  const body = s(formData, "body");
+  if (!body) return;
+  const db = createAdminClient();
+  await db.from("coach_inbox").insert({
+    team_id: sess.team.id,
+    player_id: sess.player.id,
+    from_name: `${sess.player.first_name} ${sess.player.last_name}'s parent`,
+    body,
+  });
+  revalidatePath("/parent/coach");
+}
