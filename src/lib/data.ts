@@ -123,3 +123,11 @@ export async function getUnclaimedPlayers(teamId: string) {
     .eq("team_id", teamId).eq("status", "approved").eq("claimed", false).order("first_name");
   return (data as { id: string; first_name: string; last_name: string; jersey_number: string | null }[]) ?? [];
 }
+
+import type { SubPlan } from "@/lib/types";
+export async function getSubPlans(eventId: string): Promise<SubPlan[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("sub_plans").select("*").eq("event_id", eventId)
+    .eq("status", "pending").order("created_at");
+  return (data as SubPlan[]) ?? [];
+}

@@ -97,3 +97,41 @@ export async function setPosition(formData: FormData) {
   );
   rev(event_id);
 }
+
+export async function planSub(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const event_id = String(formData.get("event_id") || "");
+  const player_in = String(formData.get("player_in") || "");
+  const player_out = String(formData.get("player_out") || "");
+  if (!event_id || !player_in || !player_out || player_in === player_out) return;
+  const db = createAdminClient();
+  await db.from("sub_plans").insert({ team_id: team.id, event_id, player_in, player_out });
+  rev(event_id);
+}
+
+export async function cancelSub(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const id = String(formData.get("id") || "");
+  const event_id = String(formData.get("event_id") || "");
+  if (!id) return;
+  const db = createAdminClient();
+  await db.from("sub_plans").delete().eq("id", id).eq("team_id", team.id);
+  rev(event_id);
+}
+
+export async function executeSub(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const id = String(formData.get("id") || "");
+  const event_id = String(formData.get("event_id") || "");
+  if (!id || !event_id) return;
+  const db = createAdminClient();
+  const { data: plan } = await db.from("sub_plans").select("*").eq("id", id).eq("team_id", team.id).maybeSingle();
+  if (!plan) return;
+  const p = plan as { player_in: string; player_out: string };
+  const { data: outRow } = await db.from("game_roster").select("position").eq("event_id", event_id).eq("player_id", p.player_out).maybeSingle();
+  const pos = (outRow as { position: string | null } | null)?.position ?? null;
+  await db.from("game_roster").upsert({ team_id: team.id, event_id, player_id: p.player_out, status: "bench" }, { onConflict: "event_id,player_id" });
+  await db.from("game_roster").upsert({ team_id: team.id, event_id, player_id: p.player_in, status: "starter", position: pos }, { onConflict: "event_id,player_id" });
+  await db.from("sub_plans").update({ status: "done" }).eq("id", id);
+  rev(event_id);
+}

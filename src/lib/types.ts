@@ -103,3 +103,8 @@ export type CoachInboxNote = {
   id: string; team_id: string; player_id: string | null; from_name: string | null;
   body: string; is_read: boolean; created_at: string;
 };
+
+export type SubPlan = {
+  id: string; team_id: string; event_id: string; player_in: string; player_out: string;
+  status: "pending" | "done"; created_at: string;
+};
