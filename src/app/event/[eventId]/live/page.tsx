@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCoachTeam } from "@/lib/auth";
 import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster } from "@/lib/data";
@@ -33,26 +34,27 @@ export default async function LiveGame({ params }: { params: { eventId: string }
   const scorerPool = onField.length > 0 ? onField : approved;
 
   return (
-    <main className="mx-auto max-w-md px-4 py-5">
-      <BackBar />
-      <h1 className="text-xl font-bold">{event.title || (event.opponent ? `vs ${event.opponent}` : "Game")}</h1>
-      <p className="text-sm text-slate-500">{fmtDate(event.start_time)} · {fmtTime(event.start_time)}{event.location ? ` · ${event.location}` : ""}</p>
-
-      {/* SCORE */}
-      <Card className="mt-4">
-        <div className="grid grid-cols-2 gap-3 text-center">
+    <main className="mx-auto max-w-md px-4 pb-12">
+      {/* GAME-DAY SCOREBOARD (sticky, focused) */}
+      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-slate-800 bg-slate-900 px-4 pb-4 pt-4 text-white shadow-xl">
+        <div className="flex items-center justify-between text-xs">
+          <Link href="/dashboard" className="font-semibold text-slate-200 hover:text-white">← Exit game mode</Link>
+          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-300">● LIVE</span>
+        </div>
+        <p className="mt-2 truncate text-center text-xs text-slate-400">{event.title || (event.opponent ? `vs ${event.opponent}` : "Game")} · {fmtTime(event.start_time)}{event.location ? ` · ${event.location}` : ""}</p>
+        <div className="mt-2 grid grid-cols-2 gap-3 text-center">
           {(["us", "them"] as const).map((side) => (
             <div key={side}>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{side === "us" ? team.name : (event.opponent || "Them")}</p>
-              <p className="my-1 text-5xl font-bold">{side === "us" ? us : them}</p>
-              <div className="flex justify-center gap-2">
-                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="dec" /><button className="h-10 w-10 rounded-full border border-slate-300 text-lg">−</button></form>
-                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="inc" /><button className="h-10 w-10 rounded-full bg-brand-600 text-lg font-bold text-white">+</button></form>
+              <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-400">{side === "us" ? team.name : (event.opponent || "Them")}</p>
+              <p className="my-1 text-6xl font-extrabold tabular-nums">{side === "us" ? us : them}</p>
+              <div className="flex justify-center gap-3">
+                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="dec" /><button className="h-11 w-11 rounded-full border border-slate-600 text-2xl leading-none text-slate-200">−</button></form>
+                <form action={incScore}><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="side" value={side} /><input type="hidden" name="op" value="inc" /><button className="h-11 w-11 rounded-full bg-emerald-500 text-2xl leading-none font-bold text-white">+</button></form>
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       {/* GOAL FOR US -> pick scorer (also bumps score) */}
       <div className="mt-5">
