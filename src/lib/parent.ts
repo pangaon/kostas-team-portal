@@ -70,7 +70,10 @@ async function resolveToken(
     .eq("id", (player as Player).team_id)
     .maybeSingle();
   if (!team) return null;
-  return { player: player as Player, team: team as Team };
+  // Privacy: coach-only fields must never reach the parent side.
+  const p = player as Player;
+  const safePlayer: Player = { ...p, coach_notes: null, preferred_position: null, strong_foot: null };
+  return { player: safePlayer, team: team as Team };
 }
 
 // The active child (first token), or null.

@@ -3,10 +3,14 @@ import { originFromEnv } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Button, Field } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { inviteLink } from "@/lib/whatsapp";
-import { updateTeam, regenerateCode } from "./actions";
+import { updateTeam, regenerateCode, inviteCoach, removeCoach } from "./actions";
+import { getStaff } from "@/lib/data";
+import { Badge } from "@/components/ui";
 
 export default async function SettingsPage() {
-  const { team } = await requireCoachTeam();
+  const { team, userId } = await requireCoachTeam();
+  const isOwner = team.created_by === userId;
+  const staff = await getStaff(team.id);
   const origin = originFromEnv();
   const invite = inviteLink(origin, team.invite_code);
   const calendarUrl = `${origin}/api/calendar/${team.invite_code}.ics`;
@@ -14,6 +18,35 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-5">
       <PageTitle title="Settings" subtitle="Team details, invite link, and calendar." />
+
+      <Card>
+        <SectionTitle>Coaching staff</SectionTitle>
+        <p className="mb-3 text-sm text-slate-500">Invite an assistant coach by email. They sign in with that email and see this team — same roster, schedule and tools.</p>
+        <ul className="mb-4 space-y-2">
+          {staff.map((m) => (
+            <li key={m.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+              <div>
+                <span className="font-medium">{m.email || (m.user_id === team.created_by ? "Head coach" : "Coach")}</span>
+                <span className="ml-2 text-xs text-slate-500">{m.role}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge color={m.status === "active" ? "green" : "amber"}>{m.status === "active" ? "active" : "invited"}</Badge>
+                {isOwner && m.user_id !== team.created_by && (
+                  <form action={removeCoach}><input type="hidden" name="id" value={m.id} /><button className="text-sm text-rose-500">remove</button></form>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        {isOwner ? (
+          <form action={inviteCoach} className="flex gap-2">
+            <input name="email" type="email" required placeholder="assistant@email.com" className="input" />
+            <Button type="submit" variant="secondary">Invite coach</Button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-500">Only the head coach can add or remove staff.</p>
+        )}
+      </Card>
 
       <Card>
         <SectionTitle>Team details</SectionTitle>

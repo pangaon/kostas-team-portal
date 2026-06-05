@@ -38,6 +38,8 @@ export default async function Dashboard() {
     getPlayers(team.id), getEvents(team.id), getAnnouncements(team.id), getSnacks(team.id),
   ]);
   const approved = players.filter((p) => p.status === "approved");
+  const joined = approved.filter((p) => p.claimed);
+  const notJoined = approved.filter((p) => !p.claimed);
   const pending = players.filter((p) => p.status === "pending");
   const next = nextEvent(events);
   const att = next ? await getAttendance(next.id) : [];
@@ -72,6 +74,24 @@ export default async function Dashboard() {
         <Stat label="Events" value={events.length} />
         <Stat label="Next: in" value={next ? counts.in : "—"} hint={next ? `${noReply} no reply` : "no events"} />
         <Stat label="Snack" value={next ? (nextSnack ? "Claimed" : "Open") : "—"} />
+      </div>
+
+      <div>
+        <SectionTitle>Registrations</SectionTitle>
+        <Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge color="green">{joined.length} joined</Badge>
+            <Badge color="slate">{notJoined.length} not joined</Badge>
+            {pending.length > 0 && <Badge color="amber">{pending.length} pending approval</Badge>}
+            <Button href="/team/roster" variant="ghost" className="ml-auto py-1">Open roster →</Button>
+          </div>
+          {notJoined.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Haven&apos;t joined yet — give them a nudge</p>
+              <p className="mt-1 text-sm text-slate-700">{notJoined.map((p) => `${p.first_name} ${p.last_name}`).join(", ")}</p>
+            </div>
+          )}
+        </Card>
       </div>
 
       <div>

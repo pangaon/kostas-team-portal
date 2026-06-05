@@ -108,3 +108,8 @@ export type SubPlan = {
   id: string; team_id: string; event_id: string; player_in: string; player_out: string;
   status: "pending" | "done"; created_at: string;
 };
+
+export type TeamMember = {
+  id: string; team_id: string; user_id: string | null; email: string | null;
+  role: string; status: string; created_at: string;
+};

@@ -131,3 +131,10 @@ export async function getSubPlans(eventId: string): Promise<SubPlan[]> {
     .eq("status", "pending").order("created_at");
   return (data as SubPlan[]) ?? [];
 }
+
+export async function getStaff(teamId: string) {
+  const a = createAdminClient();
+  const { data } = await a.from("team_members").select("*")
+    .eq("team_id", teamId).neq("status", "removed").order("created_at");
+  return (data as import("@/lib/types").TeamMember[]) ?? [];
+}
