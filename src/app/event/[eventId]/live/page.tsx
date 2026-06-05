@@ -3,12 +3,14 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster, getSubPlans, getSeasonRoster, getLineupPlans } from "@/lib/data";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { LiveGameClient } from "./LiveGameClient";
+import { sportFromString } from "@/lib/sports";
 import { withAvatars } from "@/lib/avatars";
 
 export const dynamic = "force-dynamic";
 
 export default async function LiveGame({ params }: { params: { eventId: string } }) {
   const { team } = await requireCoachTeam();
+  const sport = sportFromString(team.sport);
   const event = await getEvent(params.eventId);
   if (!event || event.team_id !== team.id) notFound();
 
@@ -44,6 +46,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
       initSubs={subPlans.map((sp) => ({ id: sp.id, player_in: sp.player_in, player_out: sp.player_out, saved: true }))}
       startsBy={startsBy}
       plans={plans.map((pl) => ({ id: pl.id, name: pl.name, slots: pl.slots }))}
+      sport={{ label: sport.label, emoji: sport.emoji, scoreTerm: sport.scoreTerm, scoreEmoji: sport.scoreEmoji, onField: sport.onField, periodType: sport.periodType, periodCount: sport.periodCount, defaultPeriodMin: sport.defaultPeriodMin, timed: sport.timed, positions: sport.positions, hasPitch: sport.hasPitch }}
     />
   );
 }

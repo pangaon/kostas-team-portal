@@ -4,6 +4,7 @@ import { Card, PageTitle, SectionTitle, Button, Field } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { inviteLink } from "@/lib/whatsapp";
 import { updateTeam, regenerateCode, inviteCoach, removeCoach } from "./actions";
+import { SPORT_OPTIONS, sportFromString } from "@/lib/sports";
 import { getStaff } from "@/lib/data";
 import { Badge } from "@/components/ui";
 
@@ -56,7 +57,9 @@ export default async function SettingsPage() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Sport" name="sport">
-              <input id="sport" name="sport" className="input" defaultValue={team.sport ?? ""} />
+              <select id="sport" name="sport" className="input" defaultValue={sportFromString(team.sport).label}>
+                {SPORT_OPTIONS.map((o) => <option key={o.id} value={o.value}>{o.label}</option>)}
+              </select>
             </Field>
             <Field label="Season" name="season">
               <input id="season" name="season" className="input" defaultValue={team.season ?? ""} />

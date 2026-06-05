@@ -19,8 +19,11 @@ export function LiveGameClient(props: {
   initUs: number; initThem: number;
   players: P[]; initField: FieldState; initGoals: Goal[]; initNotes: string[]; initSubs: Sub[];
   startsBy: Record<string, number>; plans: Plan[];
+  sport: { label: string; emoji: string; scoreTerm: string; scoreEmoji: string; onField: number; periodType: string; periodCount: number; defaultPeriodMin: number; timed: boolean; positions: string[]; hasPitch: boolean };
 }) {
-  const { eventId, players, plans } = props;
+  const { eventId, players, plans, sport } = props;
+  const ordinal = (n: number) => { const e = ["th", "st", "nd", "rd"], v = n % 100; return n + (e[(v - 20) % 10] || e[v] || e[0]); };
+  const keeperPos = sport.positions.includes("GK") ? "GK" : sport.positions.includes("G") ? "G" : null;
   const [us, setUs] = useState(props.initUs);
   const [them, setThem] = useState(props.initThem);
   const [field, setField] = useState<FieldState>(props.initField);
@@ -34,7 +37,7 @@ export function LiveGameClient(props: {
 
   // ---------- clock w/ halves + playing-time ----------
   const ckey = `live_v2_${eventId}`;
-  const [halfLen, setHalfLen] = useState(25); // minutes per half
+  const [halfLen, setHalfLen] = useState(sport.defaultPeriodMin || 25); // minutes per period
   const [half, setHalf] = useState(1);
   const [running, setRunning] = useState(false);
   const [tick, setTick] = useState(0); // forces re-render each second
@@ -52,7 +55,7 @@ export function LiveGameClient(props: {
     try {
       const raw = localStorage.getItem(ckey);
       if (raw) { const o = JSON.parse(raw);
-        setHalfLen(o.halfLen ?? 25); setHalf(o.half ?? 1);
+        setHalfLen(o.halfLen ?? (sport.defaultPeriodMin || 25)); setHalf(o.half ?? 1);
         baseRef.current = o.base ?? 0; startedRef.current = o.startedAt ?? null;
         minsRef.current = o.mins ?? {}; onSinceRef.current = o.onSince ?? {};
         setRunning(!!o.startedAt);
@@ -109,14 +112,15 @@ export function LiveGameClient(props: {
   const liveMins = (id: string) => { const s = onSinceRef.current[id]; return (minsRef.current[id] ?? 0) + (s ? (Date.now() - s) / 1000 : 0); };
 
   const secInHalf = baseRef.current + (startedRef.current ? Math.floor((Date.now() - startedRef.current) / 1000) : 0);
-  const halfDone = secInHalf >= halfLen * 60;
+  const halfDone = sport.timed && secInHalf >= halfLen * 60;
+  const atLastPeriod = half >= sport.periodCount;
 
   const toggleClock = () => {
     if (running) { baseRef.current = secInHalf; startedRef.current = null; flushMins(); setRunning(false); }
     else { startedRef.current = Date.now(); startAccrual(field); setRunning(true); }
     setTimeout(() => { persist(); persistServer(); }, 0);
   };
-  const startSecondHalf = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf(2); setTimeout(() => { persist(); persistServer(); }, 0); };
+  const advancePeriod = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf((h) => Math.min(sport.periodCount, h + 1)); setTimeout(() => { persist(); persistServer(); }, 0); };
   const resetClock = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; minsRef.current = {}; setRunning(false); setHalf(1); setTick((n) => n + 1); setTimeout(() => { persist(); persistServer(); }, 0); };
 
   // ---------- field mutations (keep minutes correct) ----------
@@ -139,13 +143,13 @@ export function LiveGameClient(props: {
   const pendingOut = new Set(subs.map((x) => x.player_out));
   const pendingIn = new Set(subs.map((x) => x.player_in));
   const posCount = (c: string) => onField.filter((p) => field[p.id]?.position === c).length;
-  const hasGK = onField.some((p) => field[p.id]?.position === "GK");
+  const hasKeeper = keeperPos ? onField.some((p) => field[p.id]?.position === keeperPos) : true;
 
   const score = (side: "us" | "them", delta: number) => {
     if (side === "us") { const v = Math.max(0, us + delta); setUs(v); post("score", { side, value: v }); }
     else { const v = Math.max(0, them + delta); setThem(v); post("score", { side, value: v }); }
   };
-  const curMinute = Math.floor((half === 2 ? halfLen * 60 : 0) + secInHalf) / 60;
+  const curMinute = Math.floor((half - 1) * (sport.timed ? halfLen : 0) * 60 + secInHalf) / 60;
   const logGoal = async (player_id: string | null) => {
     const tmp = "tmp-" + Math.random().toString(36).slice(2);
     const minute = running || secInHalf > 0 ? Math.floor(curMinute) + 1 : null;
@@ -185,8 +189,9 @@ export function LiveGameClient(props: {
   };
 
   const autoPickLive = () => {
-    const POS = ["GK", "DEF", "DEF", "DEF", "MID", "MID", "MID", "FWD"];
-    const pool = [...players].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0)).slice(0, 8);
+    const pos = sport.positions;
+    const POS = Array.from({ length: sport.onField }, (_, i) => (i === 0 ? pos[0] : pos[1 + ((i - 1) % Math.max(1, pos.length - 1))]));
+    const pool = [...players].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0)).slice(0, sport.onField);
     const next: FieldState = {};
     for (const p of players) next[p.id] = { status: "bench", position: field[p.id]?.position ?? null };
     pool.forEach((p, i) => { next[p.id] = { status: "starter", position: POS[i] }; });
@@ -224,13 +229,13 @@ export function LiveGameClient(props: {
         <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
           <ScoreCol label={props.teamName} value={us} onMinus={() => score("us", -1)} onPlus={() => score("us", +1)} accent />
           <div className="flex flex-col items-center">
-            <span className={`text-[10px] font-bold uppercase tracking-wide ${halfDone ? "text-amber-300" : "text-slate-400"}`}>{half === 1 ? "1st half" : "2nd half"}{halfDone ? (half === 1 ? " · HALFTIME" : " · FULL TIME") : ""}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wide ${halfDone ? "text-amber-300" : "text-slate-400"}`}>{ordinal(half)} {sport.periodType}{halfDone ? (atLastPeriod ? " · FINAL" : " · BREAK") : ""}</span>
             <span className="font-mono text-3xl font-bold tabular-nums">{fmtMin(secInHalf)}</span>
-            <span className="text-[10px] text-slate-500">/ {halfLen}:00</span>
+            {sport.timed && <span className="text-[10px] text-slate-500">/ {halfLen}:00</span>}
             <div className="mt-1 flex gap-1">
               <button onClick={toggleClock} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90">{running ? <Pause size={15} /> : <Play size={15} />}</button>
-              {half === 1 && halfDone ? (
-                <button onClick={startSecondHalf} className="rounded-full bg-emerald-500 px-2 text-[11px] font-bold active:scale-90">2nd half ▶</button>
+              {(!atLastPeriod && (halfDone || !sport.timed)) ? (
+                <button onClick={advancePeriod} className="rounded-full bg-emerald-500 px-2 text-[11px] font-bold active:scale-90">{ordinal(half + 1)} {sport.periodType} ▶</button>
               ) : (
                 <button onClick={resetClock} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><RotateCcw size={14} /></button>
               )}
@@ -238,12 +243,14 @@ export function LiveGameClient(props: {
           </div>
           <ScoreCol label={props.opponent || "Them"} value={them} onMinus={() => score("them", -1)} onPlus={() => score("them", +1)} />
         </div>
-        <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-          <Timer size={12} /> Half length
-          <select value={halfLen} onChange={(e) => { setHalfLen(parseInt(e.target.value, 10)); setTimeout(() => { persist(); persistServer(); }, 0); }} className="rounded bg-white/10 px-1 py-0.5 text-white">
-            {[20, 25, 30, 35, 40, 45].map((n) => <option key={n} value={n} className="text-ink">{n} min</option>)}
-          </select>
-        </div>
+        {sport.timed && (
+          <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400">
+            <Timer size={12} /> {sport.periodType} length
+            <select value={halfLen} onChange={(e) => { setHalfLen(parseInt(e.target.value, 10)); setTimeout(() => { persist(); persistServer(); }, 0); }} className="rounded bg-white/10 px-1 py-0.5 text-white">
+              {[8, 10, 12, 15, 20, 25, 30, 35, 40, 45].map((n) => <option key={n} value={n} className="text-ink">{n} min</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Lineup setup when nobody is on yet */}
@@ -255,7 +262,7 @@ export function LiveGameClient(props: {
             {plans.map((pl) => (
               <button key={pl.id} onClick={() => applyLine(pl)} className="rounded-full border border-brand-300 bg-white px-3 py-2 text-sm font-semibold text-brand-700 active:scale-95">▶ {pl.name}</button>
             ))}
-            <button onClick={autoPickLive} className="btn-primary">✨ Auto-pick 8</button>
+            <button onClick={autoPickLive} className="btn-primary">✨ Auto-pick {sport.onField}</button>
           </div>
           {plans.length === 0 && <p className="mt-2 text-xs text-slate-400">Tip: build &amp; name lineups in Tactics (e.g. “Aces”, “Subs”) to load them here in one tap.</p>}
         </div>
@@ -302,7 +309,7 @@ export function LiveGameClient(props: {
       </div>
 
       {/* Goal logging */}
-      <Section title="⚽ Goal for us — tap the scorer" />
+      <Section title={`${sport.scoreEmoji} ${sport.scoreTerm} for us — tap the scorer`} />
       {onField.length === 0 ? (
         <p className="text-sm text-slate-400">Set your lineup above first — then your on-field players show here to tap when they score.</p>
       ) : (
@@ -327,9 +334,9 @@ export function LiveGameClient(props: {
       )}
 
       {/* On field */}
-      <Section title={`On the field (${onField.length}/8)`} />
-      <p className="mb-2 text-xs text-slate-500">🧤 GK {posCount("GK")} · DEF {posCount("DEF")} · MID {posCount("MID")} · FWD {posCount("FWD")}</p>
-      {(!hasGK || onField.length !== 8) && <p className="mb-2 text-xs font-semibold text-amber-600">{!hasGK ? "⚠ No goalie set" : ""}{!hasGK && onField.length !== 8 ? " · " : ""}{onField.length !== 8 ? `${onField.length}/8 on field` : ""}</p>}
+      <Section title={`On the ${sport.hasPitch ? "field" : "lineup"} (${onField.length}/${sport.onField})`} />
+      <p className="mb-2 text-xs text-slate-500">{sport.positions.map((c) => `${c} ${posCount(c)}`).join(" · ")}</p>
+      {((keeperPos && !hasKeeper) || onField.length !== sport.onField) && <p className="mb-2 text-xs font-semibold text-amber-600">{keeperPos && !hasKeeper ? `⚠ No ${keeperPos} set` : ""}{keeperPos && !hasKeeper && onField.length !== sport.onField ? " · " : ""}{onField.length !== sport.onField ? `${onField.length}/${sport.onField} on` : ""}</p>}
       <div className="space-y-2">
         {onField.map((p) => (
           <div key={p.id} className={`flex items-center gap-2 rounded-xl border p-2 ${field[p.id]?.position === "GK" ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
@@ -337,7 +344,7 @@ export function LiveGameClient(props: {
             <span className="flex-1 text-sm font-semibold">{field[p.id]?.position === "GK" ? "🧤 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}{pendingOut.has(p.id) && <span className="ml-1 rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-700">SUBBING OFF</span>}</span>
             <span className="text-xs font-semibold tabular-nums text-slate-400">{fmtMin(liveMins(p.id))}</span>
             <select value={field[p.id]?.position ?? ""} onChange={(e) => setPos(p.id, e.target.value)} className="input !w-auto py-1 text-sm">
-              <option value="">pos</option>{POSITIONS.map((x) => <option key={x} value={x}>{x}</option>)}
+              <option value="">pos</option>{sport.positions.map((x) => <option key={x} value={x}>{x}</option>)}
             </select>
             <button onClick={() => toggleField(p.id)} className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 active:scale-95">off</button>
           </div>
