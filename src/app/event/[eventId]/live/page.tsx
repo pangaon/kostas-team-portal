@@ -3,6 +3,7 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster, getSubPlans, getSeasonRoster } from "@/lib/data";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { LiveGameClient } from "./LiveGameClient";
+import { withAvatars } from "@/lib/avatars";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
     getResult(event.id), getGoals(event.id), getPlayersWithGuardians(team.id), getGameRoster(event.id),
     getSubPlans(event.id), getSeasonRoster(team.id),
   ]);
-  const approved = players.filter((p) => p.status === "approved");
+  const approved = await withAvatars(players.filter((p) => p.status === "approved"));
 
   const initField: Record<string, { status: "starter" | "bench" | "out"; position: string | null }> = {};
   for (const r of roster) initField[r.player_id] = { status: r.status, position: r.position };
@@ -35,7 +36,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
       players={approved.map((p) => ({
         id: p.id, first_name: p.first_name, last_name: p.last_name, jersey_number: p.jersey_number,
         allergies: p.allergies, emergency_contact_name: p.emergency_contact_name, emergency_contact_phone: p.emergency_contact_phone,
-        guardian_phone: p.guardians?.[0]?.phone ?? null,
+        guardian_phone: p.guardians?.[0]?.phone ?? null, avatar_url: p.avatar_url,
       }))}
       initField={initField}
       initGoals={goals.map((g) => ({ id: g.id, player_id: g.player_id, saved: true }))}

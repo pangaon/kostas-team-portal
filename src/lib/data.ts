@@ -144,3 +144,9 @@ export async function getLineupPlans(eventId: string) {
   const { data } = await a.from("lineup_plans").select("*").eq("event_id", eventId).order("created_at");
   return (data as import("@/lib/types").LineupPlan[]) ?? [];
 }
+
+export async function getNotifications(teamId: string, limit = 60): Promise<{ id: string; kind: string; title: string; body: string | null; created_at: string }[]> {
+  const a = createAdminClient();
+  const { data } = await a.from("notifications").select("id, kind, title, body, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(limit);
+  return (data as { id: string; kind: string; title: string; body: string | null; created_at: string }[]) ?? [];
+}
