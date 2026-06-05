@@ -63,6 +63,7 @@ export default async function SettingsPage() {
               <select id="sport" name="sport" className="input" defaultValue={sportFromString(team.sport).label}>
                 {SPORT_OPTIONS.map((o) => <option key={o.id} value={o.value}>{o.label}</option>)}
               </select>
+              <p className="mt-1 text-xs text-slate-400">Changes positions, periods &amp; scoring labels only — your players, schedule and history stay safe. Switch back anytime.</p>
             </Field>
             <Field label="Season" name="season">
               <input id="season" name="season" className="input" defaultValue={team.season ?? ""} />

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { SKILL_OPTIONS } from "@/lib/skills";
+import { SKILL_GROUPS, WORKING_ON } from "@/lib/skills";
 
 export function CoachPlayerTools({ playerId, parentName, initialSkills }: { playerId: string; parentName: string; initialSkills: string[] }) {
   const [skills, setSkills] = useState<string[]>(initialSkills);
@@ -18,21 +18,30 @@ export function CoachPlayerTools({ playerId, parentName, initialSkills }: { play
     await fetch("/api/player", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "tip", playerId, text: t }) }).catch(() => {});
   };
 
+  const chosen = skills.length;
+
   return (
     <div className="space-y-3">
       <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Skills &amp; notes (private)</p>
-        <div className="flex flex-wrap gap-1.5">
-          {SKILL_OPTIONS.map((s) => {
-            const on = skills.includes(s);
-            const isNeed = s.startsWith("Needs");
-            return (
-              <button key={s} onClick={() => toggle(s)}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? (isNeed ? "border-amber-400 bg-amber-50 text-amber-700" : "border-brand-400 bg-brand-50 text-brand-700") : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-                {on ? "✓ " : ""}{s}
-              </button>
-            );
-          })}
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Player profile — tap what fits {chosen > 0 ? `· ${chosen} selected` : ""}</p>
+        <div className="space-y-2.5">
+          {SKILL_GROUPS.map((grp) => (
+            <div key={grp.group}>
+              <p className="mb-1 text-[11px] font-semibold text-slate-400">{grp.emoji} {grp.group}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {grp.options.map((s) => {
+                  const on = skills.includes(s);
+                  const need = WORKING_ON.has(s);
+                  return (
+                    <button key={s} onClick={() => toggle(s)}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? (need ? "border-amber-400 bg-amber-50 text-amber-700" : "border-brand-400 bg-brand-50 text-brand-700") : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                      {on ? "✓ " : ""}{s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
       <div>
