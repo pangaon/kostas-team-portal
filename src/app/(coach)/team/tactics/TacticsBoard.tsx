@@ -140,6 +140,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
     }
   };
   const loadPlan = (pl: LineupPlan) => { setPlanId(pl.id); setName(pl.name); setFormation(pl.formation); apply(pl.slots?.length ? pl.slots : buildSlots(pl.formation, [])); setSel(null); };
+  const newBlank = () => { setPlanId(null); setName(`Line ${plans.length + 1}`); apply(buildSlots(formation, [])); setSel(null); flash("New blank line — Save to keep it"); };
   const delPlan = async (id: string) => { await post("delete", { id }); setPlans((ps) => ps.filter((x) => x.id !== id)); if (planId === id) { setPlanId(null); setName("Plan"); } };
   const pushGame = async () => { await post("push", { slots }); flash("Lineup sent to the game ✓"); };
 
@@ -277,21 +278,28 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
           <p className="mt-1.5 text-xs text-slate-400">Tip: drag a player onto a spot, or drag them off to bench. ✓ = attending.</p>
         </div>
 
-        {/* save + plans */}
+        {/* save + lines */}
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
+          <p className={`mb-2 text-xs font-semibold ${planId ? "text-brand-600" : "text-slate-400"}`}>
+            {planId ? `✏️ Editing “${name}” — Save updates this line` : "🆕 New line — Save creates a new one"}
+          </p>
           <div className="flex flex-wrap items-center gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} className="input min-w-0 flex-1 py-2" placeholder="Lineup name" />
-            <button onClick={() => save(false)} className="btn-dark"><Save size={15} /> Save</button>
-            <button onClick={() => save(true)} className="btn-ghost"><Plus size={15} /> New</button>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input min-w-0 flex-1 py-2" placeholder="Line name (e.g. Aces)" />
+            <button onClick={() => save(false)} className="btn-dark"><Save size={15} /> {planId ? "Update" : "Save"}</button>
+            {planId && <button onClick={() => save(true)} className="btn-ghost"><Plus size={15} /> Save as new</button>}
+            <button onClick={newBlank} className="btn-ghost">New blank</button>
           </div>
           {plans.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {plans.map((pl) => (
-                <span key={pl.id} className={`chip border ${planId === pl.id ? "border-brand-400 bg-brand-50 text-brand-700" : "border-slate-300 text-slate-600"}`}>
-                  <button onClick={() => loadPlan(pl)}>{pl.name} · {pl.formation}</button>
-                  <button onClick={() => delPlan(pl.id)} className="text-rose-400">×</button>
-                </span>
-              ))}
+            <div className="mt-3">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Saved lines — tap to load</p>
+              <div className="flex flex-wrap gap-2">
+                {plans.map((pl) => (
+                  <span key={pl.id} className={`chip border ${planId === pl.id ? "border-brand-400 bg-brand-50 text-brand-700" : "border-slate-300 text-slate-600"}`}>
+                    <button onClick={() => loadPlan(pl)}>{pl.name} · {pl.formation}</button>
+                    <button onClick={() => delPlan(pl.id)} className="text-rose-400" aria-label="Delete line">×</button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

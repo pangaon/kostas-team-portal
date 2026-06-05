@@ -114,6 +114,8 @@ export async function updateOwnProfile(formData: FormData) {
       emergency_contact_name: nullable(s(formData, "emergency_contact_name")),
       emergency_contact_phone: nullable(s(formData, "emergency_contact_phone")),
       jersey_number: nullable(s(formData, "jersey_number")),
+      strong_foot: nullable(s(formData, "strong_foot")),
+      preferred_position: nullable(s(formData, "preferred_position")),
     })
     .eq("id", session.player.id);
 

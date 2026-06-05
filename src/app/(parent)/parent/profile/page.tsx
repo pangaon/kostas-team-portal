@@ -21,6 +21,8 @@ export default async function ProfilePage() {
     .eq("is_primary", true)
     .maybeSingle();
   const g = (guardian as Guardian) ?? null;
+  const { data: realPlayer } = await admin.from("players").select("strong_foot, preferred_position").eq("id", player.id).maybeSingle();
+  const rp = (realPlayer as { strong_foot: string | null; preferred_position: string | null } | null) ?? null;
 
   const { data: blockData } = await admin
     .from("availability_blocks")
@@ -56,6 +58,22 @@ export default async function ProfilePage() {
               placeholder="e.g. peanuts, dairy"
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="strong_foot">Strong foot / hand</label>
+              <select id="strong_foot" name="strong_foot" className="input" defaultValue={rp?.strong_foot ?? ""}>
+                <option value="">Not set</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="preferred_position">Favourite position</label>
+              <input id="preferred_position" name="preferred_position" className="input" defaultValue={rp?.preferred_position ?? ""} placeholder="e.g. midfield, goalie" />
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">Helps your coach plan the lineup. You can leave these blank.</p>
         </Card>
 
         <Card className="space-y-3">
