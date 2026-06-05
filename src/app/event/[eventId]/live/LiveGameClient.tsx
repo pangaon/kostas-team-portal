@@ -46,6 +46,8 @@ export function LiveGameClient(props: {
   const minsRef = useRef<Record<string, number>>({});      // committed seconds played
   const onSinceRef = useRef<Record<string, number | null>>({});
   const lastWrittenRef = useRef(0);
+  const audioRef = useRef<AudioContext | null>(null);
+  const endAlertedRef = useRef(false);
 
   const persist = useCallback(() => {
     try { localStorage.setItem(ckey, JSON.stringify({ halfLen, half, base: baseRef.current, startedAt: startedRef.current, mins: minsRef.current, onSince: onSinceRef.current })); } catch {}
@@ -62,6 +64,18 @@ export function LiveGameClient(props: {
       }
     } catch {}
   }, [ckey]);
+
+  const ensureAudio = () => { try { if (!audioRef.current) audioRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)(); audioRef.current?.resume?.(); } catch {} };
+  const playWhistle = (long = false) => {
+    try {
+      const ctx = audioRef.current; if (!ctx) return;
+      const blast = (t: number, f: number, d: number) => { const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type = "square"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.start(t); o.stop(t + d); };
+      const now = ctx.currentTime;
+      blast(now, 1760, 0.35); blast(now + 0.45, 1760, long ? 0.9 : 0.35);
+      if (long) blast(now + 0.45, 1320, 0.9);
+    } catch {}
+    try { navigator.vibrate?.(long ? [300, 120, 300, 120, 500] : [250, 120, 250]); } catch {}
+  };
 
   // ---- cross-device sync (clock + minutes via server) ----
   const stateBlob = () => ({ halfLen, half, base: baseRef.current, startedAt: startedRef.current, mins: minsRef.current, onSince: onSinceRef.current, writtenAt: Date.now() });
@@ -93,9 +107,21 @@ export function LiveGameClient(props: {
 
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => { setTick((n) => n + 1); persist(); }, 1000);
+    const t = setInterval(() => {
+      setTick((n) => n + 1); persist();
+      if (sport.timed && startedRef.current) {
+        const sec = baseRef.current + Math.floor((Date.now() - startedRef.current) / 1000);
+        if (sec >= halfLen * 60 && !endAlertedRef.current) {
+          endAlertedRef.current = true;
+          baseRef.current = halfLen * 60; startedRef.current = null; flushMins(); setRunning(false);
+          setTimeout(() => { persist(); persistServer(); }, 0);
+          playWhistle(half >= sport.periodCount);
+        }
+      }
+    }, 1000);
     return () => clearInterval(t);
-  }, [running, persist]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, persist, halfLen, half]);
 
   const flushMins = () => {
     const now = Date.now();
@@ -117,11 +143,11 @@ export function LiveGameClient(props: {
 
   const toggleClock = () => {
     if (running) { baseRef.current = secInHalf; startedRef.current = null; flushMins(); setRunning(false); }
-    else { startedRef.current = Date.now(); startAccrual(field); setRunning(true); }
+    else { ensureAudio(); endAlertedRef.current = false; startedRef.current = Date.now(); startAccrual(field); setRunning(true); }
     setTimeout(() => { persist(); persistServer(); }, 0);
   };
-  const advancePeriod = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf((h) => Math.min(sport.periodCount, h + 1)); setTimeout(() => { persist(); persistServer(); }, 0); };
-  const resetClock = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; minsRef.current = {}; setRunning(false); setHalf(1); setTick((n) => n + 1); setTimeout(() => { persist(); persistServer(); }, 0); };
+  const advancePeriod = () => { endAlertedRef.current = false; flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf((h) => Math.min(sport.periodCount, h + 1)); setTimeout(() => { persist(); persistServer(); }, 0); };
+  const resetClock = () => { endAlertedRef.current = false; flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; minsRef.current = {}; setRunning(false); setHalf(1); setTick((n) => n + 1); setTimeout(() => { persist(); persistServer(); }, 0); };
 
   // ---------- field mutations (keep minutes correct) ----------
   const setFieldTracked = (next: FieldState) => {
@@ -230,7 +256,7 @@ export function LiveGameClient(props: {
           <ScoreCol label={props.teamName} value={us} onMinus={() => score("us", -1)} onPlus={() => score("us", +1)} accent />
           <div className="flex flex-col items-center">
             <span className={`text-[10px] font-bold uppercase tracking-wide ${halfDone ? "text-amber-300" : "text-slate-400"}`}>{ordinal(half)} {sport.periodType}{halfDone ? (atLastPeriod ? " · FINAL" : " · BREAK") : ""}</span>
-            <span className="font-mono text-3xl font-bold tabular-nums">{fmtMin(secInHalf)}</span>
+            <span className="font-mono text-3xl font-bold tabular-nums">{fmtMin(sport.timed ? Math.min(secInHalf, halfLen * 60) : secInHalf)}</span>
             {sport.timed && <span className="text-[10px] text-slate-500">/ {halfLen}:00</span>}
             <div className="mt-1 flex gap-1">
               <button onClick={toggleClock} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90">{running ? <Pause size={15} /> : <Play size={15} />}</button>

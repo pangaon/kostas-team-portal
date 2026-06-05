@@ -53,24 +53,29 @@ export default async function ParentCoachPage() {
       </div>
 
       <div>
-        <SectionTitle>Chat with the coach</SectionTitle>
-        <Card>
-          {messages.length > 0 && (
-            <div className="mb-3 space-y-2">
-              {messages.map((m) => (
-                <div key={m.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.fromCoach ? "bg-brand-600 text-white" : "ml-auto border border-slate-200 bg-white text-ink"}`}>
-                  <p className="whitespace-pre-line">{m.body}</p>
-                  <p className={`mt-1 text-[10px] ${m.fromCoach ? "text-brand-100" : "text-slate-400"}`}>{m.fromCoach ? "Coach" : "You"}</p>
+        <SectionTitle>Chat with your coach</SectionTitle>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+          <div className="max-h-[55vh] space-y-2.5 overflow-y-auto bg-slate-50 p-3">
+            {messages.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-3xl">👋</p>
+                <p className="mt-2 text-sm text-slate-500">Say hi to your coach — questions, scheduling,<br />or anything about {sess.player.first_name}.</p>
+              </div>
+            ) : messages.map((m) => (
+              <div key={m.id} className={`flex ${m.fromCoach ? "justify-start" : "justify-end"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${m.fromCoach ? "rounded-bl-md bg-white text-ink ring-1 ring-slate-200" : "rounded-br-md bg-brand-600 text-white"}`}>
+                  <p className="whitespace-pre-line leading-snug">{m.body}</p>
+                  <p className={`mt-0.5 text-[10px] ${m.fromCoach ? "text-slate-400" : "text-brand-100"}`}>{m.fromCoach ? "Coach" : "You"}</p>
                 </div>
-              ))}
-            </div>
-          )}
-          <form action={sendCoachNote} className="space-y-3">
-            <textarea name="body" required rows={2} className="input" placeholder="Message the coach…" />
-            <Button type="submit">Send</Button>
+              </div>
+            ))}
+          </div>
+          <form action={sendCoachNote} className="flex items-center gap-2 border-t border-slate-100 p-2">
+            <input name="body" required autoComplete="off" className="input flex-1 py-2.5" placeholder="Message your coach…" />
+            <Button type="submit" className="shrink-0">Send</Button>
           </form>
-          <p className="mt-2 text-xs text-slate-400">Private — only your coach sees this.</p>
-        </Card>
+        </div>
+        <p className="mt-1.5 px-1 text-xs text-slate-400">🔒 Private — only your coach sees this.</p>
       </div>
     </div>
   );

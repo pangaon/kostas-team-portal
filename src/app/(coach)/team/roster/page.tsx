@@ -6,6 +6,8 @@ import type { PlayerWithGuardians, Guardian } from "@/lib/types";
 import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending } from "./actions";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
+import { CoachPlayerTools } from "@/components/CoachPlayerTools";
+import { readProfiles } from "@/lib/playerprofile";
 
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
@@ -117,6 +119,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
     });
 
   const approvedA = await withAvatars(approved);
+  const skillsByPlayer = await readProfiles(approvedA.map((p) => p.id));
   const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
     const pc = contactsOf(pend);
@@ -248,6 +251,12 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                     )}
                     {(p.emergency_contact_name || p.emergency_contact_phone) && <p className="text-slate-600">Emergency: {[p.emergency_contact_name, p.emergency_contact_phone].filter(Boolean).join(" · ")}</p>}
                     {p.coach_notes && <p className="rounded-lg bg-slate-50 p-2 text-slate-600">📝 {p.coach_notes}</p>}
+                  </div>
+                </details>
+                <details className="border-t border-slate-100">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600">🧠 Coach tools — skills &amp; send a tip</summary>
+                  <div className="px-3 pb-3">
+                    <CoachPlayerTools playerId={p.id} parentName={primaryGuardian(p)?.name ?? ""} initialSkills={skillsByPlayer[p.id] ?? []} />
                   </div>
                 </details>
                 <div className="flex border-t border-slate-100 text-sm font-medium">
