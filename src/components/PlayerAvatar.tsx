@@ -24,7 +24,7 @@ export function PlayerAvatar({
     >
       {showPhoto ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={photoUrl!} alt={name} className="h-full w-full object-cover" onError={() => setFailed(true)} />
+        <img src={photoUrl!} alt={name} draggable={false} className="h-full w-full select-none object-cover" style={{ WebkitUserDrag: "none" } as React.CSSProperties} onError={() => setFailed(true)} />
       ) : (
         initialsOf(name)
       )}

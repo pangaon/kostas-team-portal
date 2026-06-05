@@ -1,5 +1,6 @@
 "use client";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
 import { Undo2, Sparkles, Eraser, Share2, Save, Plus, X } from "lucide-react";
 import { FORMATIONS_8, type LineupSlot, type LineupPlan } from "@/lib/types";
@@ -38,12 +39,21 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
 
   const pitchRef = useRef<HTMLDivElement>(null);
+  const draftKey = `tactics_draft_${eventId}`;
   const dragRef = useRef<{ id: string; fromSlot: number | null; sx: number; sy: number; moved: boolean } | null>(null);
 
   const post = useCallback(async (op: string, payload: Record<string, unknown>) => {
     const r = await fetch("/api/tactics", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId, op, payload }) });
     return r.json().catch(() => null);
   }, [eventId]);
+
+  useEffect(() => {
+    try { const raw = localStorage.getItem(draftKey); if (raw) { const d = JSON.parse(raw); if (d?.slots?.length) { setFormation(d.formation); setSlots(d.slots); if (d.name) setName(d.name); } } } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(draftKey, JSON.stringify({ formation, slots, name })); } catch {}
+  }, [draftKey, formation, slots, name]);
 
   const byId = useCallback((id: string | null) => roster.find((p) => p.id === id), [roster]);
   const flash = (t: string) => { setMsg(t); setTimeout(() => setMsg(""), 1800); };
@@ -71,9 +81,11 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
 
   // ---- pointer drag (works for touch + mouse) ----
   const onDown = (e: React.PointerEvent, id: string, fromSlot: number | null) => {
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     dragRef.current = { id, fromSlot, sx: e.clientX, sy: e.clientY, moved: false };
   };
+  const noNativeDrag = (e: React.DragEvent) => e.preventDefault();
   const onMove = (e: React.PointerEvent) => {
     const d = dragRef.current; if (!d) return;
     if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 6) return;
@@ -166,7 +178,14 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
         {/* PITCH */}
         <div ref={pitchRef}
           className="relative mx-auto w-full max-w-sm select-none overflow-hidden rounded-[22px] shadow-lift lg:max-w-none"
-          style={{ aspectRatio: "3 / 4", background: "repeating-linear-gradient(0deg,#2aa052 0,#2aa052 12.5%,#239049 12.5%,#239049 25%)", touchAction: "none" }}>
+          style={{
+            aspectRatio: "3 / 4",
+            background:
+              "radial-gradient(130% 90% at 50% 18%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%)," +
+              "radial-gradient(150% 120% at 50% 55%, rgba(0,0,0,0) 58%, rgba(0,0,0,.42))," +
+              "repeating-linear-gradient(90deg,#2b8d4f 0,#2b8d4f 11.11%,#26824a 11.11%,#26824a 22.22%)",
+            touchAction: "none",
+          }}>
           {/* lighting + vignette */}
           <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 80% at 50% 30%, rgba(255,255,255,.18), rgba(0,0,0,0) 55%), radial-gradient(140% 100% at 50% 100%, rgba(0,0,0,.28), rgba(0,0,0,0) 60%)" }} />
           {/* markings */}
@@ -186,9 +205,9 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
             return (
               <div key={i} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${s.x}%`, top: `${s.y}%` }}>
                 {pl ? (
-                  <div onPointerDown={(e) => onDown(e, pl.id, i)}
-                    className="flex cursor-grab flex-col items-center gap-0.5 active:cursor-grabbing"
-                    style={{ animation: "pop .2s both" }}>
+                  <div onPointerDown={(e) => onDown(e, pl.id, i)} onDragStart={noNativeDrag} draggable={false}
+                    className="flex cursor-grab select-none flex-col items-center gap-0.5 active:cursor-grabbing"
+                    style={{ animation: "pop .2s both", touchAction: "none" }}>
                     <div className="relative rounded-full p-[2px] shadow-token" style={{ background: ringColor(pl.strength) }}>
                       <PlayerAvatar name={`${pl.first_name} ${pl.last_name}`} photoUrl={pl.avatar_url} size={42} />
                       {pl.jersey_number && (
@@ -199,7 +218,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
                   </div>
                 ) : (
                   <button onClick={() => tapSlot(i)}
-                    className="grid h-11 w-11 place-items-center rounded-full border-2 border-dashed border-white/60 text-[10px] font-bold text-white/85 transition hover:bg-white/10">{s.pos}</button>
+                    className="grid h-10 w-10 place-items-center rounded-full border border-white/45 bg-white/10 text-[10px] font-bold text-white/80 backdrop-blur-[1px] transition hover:bg-white/20">{s.pos}</button>
                 )}
               </div>
             );
@@ -242,8 +261,8 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Squad — drag onto the pitch</p>
           <div className="flex flex-wrap gap-2">
             {bench.map((p) => (
-              <div key={p.id} onPointerDown={(e) => onDown(e, p.id, null)}
-                className={`flex cursor-grab items-center gap-1.5 rounded-full border bg-white py-1 pl-1 pr-3 text-sm font-semibold text-ink shadow-card transition active:cursor-grabbing ${sel === p.id ? "border-brand-500 ring-2 ring-brand-200" : "border-slate-200"}`}
+              <div key={p.id} onPointerDown={(e) => onDown(e, p.id, null)} onDragStart={noNativeDrag} draggable={false}
+                className={`flex cursor-grab select-none items-center gap-1.5 rounded-full border bg-white py-1 pl-1 pr-3 text-sm font-semibold text-ink shadow-card transition active:cursor-grabbing ${sel === p.id ? "border-brand-500 ring-2 ring-brand-200" : "border-slate-200"}`}
                 style={{ touchAction: "none" }}>
                 <span className="relative">
                   <PlayerAvatar name={`${p.first_name} ${p.last_name}`} photoUrl={p.avatar_url} size={26} />
@@ -280,13 +299,13 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
         <button onClick={pushGame} className="btn w-full bg-emerald-600 py-3.5 text-base font-bold text-white shadow-card hover:bg-emerald-700">▶ Use this lineup in the game</button>
       </div>
 
-      {/* drag ghost */}
-      {drag && (() => { const p = byId(drag.id); if (!p) return null; return (
-        <div className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2" style={{ left: drag.x, top: drag.y }}>
+      {/* drag ghost (portal to body so it tracks the cursor exactly) */}
+      {drag && typeof document !== "undefined" && (() => { const p = byId(drag.id); if (!p) return null; return createPortal(
+        <div className="pointer-events-none fixed z-[100] -translate-x-1/2 -translate-y-1/2" style={{ left: drag.x, top: drag.y }}>
           <div className="rounded-full p-[2px] shadow-token" style={{ background: ringColor(p.strength) }}>
             <PlayerAvatar name={`${p.first_name} ${p.last_name}`} photoUrl={p.avatar_url} size={46} />
           </div>
-        </div>
+        </div>, document.body
       ); })()}
     </div>
   );
