@@ -8,7 +8,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
 import { inviteLink } from "@/lib/whatsapp";
-import { createTeam, sendTestAlert } from "./actions";
+import { createTeam, sendTestAlert, sendTodayReminders } from "./actions";
 import { CoachPushControls } from "@/components/CoachPushControls";
 
 export default async function Dashboard() {
@@ -142,6 +142,8 @@ export default async function Dashboard() {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <CoachPushControls />
             <form action={sendTestAlert}><Button type="submit" variant="secondary">Send test alert</Button></form>
+            <form action={sendTodayReminders}><Button type="submit">📣 Send today&rsquo;s reminders</Button></form>
+            <p className="text-xs text-slate-500">Auto-sends every game day at 8am. Tap to send now or test.</p>
           </div>
         </Card>
       </div>

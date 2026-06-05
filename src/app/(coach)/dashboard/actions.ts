@@ -30,3 +30,16 @@ export async function sendTestAlert() {
   const { team } = await requireCoachTeam();
   await notifyTeam(team.id, { title: "✅ Test alert", body: "If you see this, alerts are working!", url: "/dashboard" });
 }
+
+export async function sendTodayReminders() {
+  const { team } = await requireCoachTeam();
+  const { runAutoNotifications } = await import("@/lib/notify-engine");
+  const r = await runAutoNotifications(team.id);
+  const msg =
+    r.sent > 0
+      ? `Sent ${r.sent} reminder${r.sent === 1 ? "" : "s"}`
+      : r.scanned > 0
+      ? "Already sent for today"
+      : "No events today";
+  redirect("/dashboard?saved=" + encodeURIComponent(msg));
+}
