@@ -5,6 +5,8 @@ import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
 import type { TeamEvent } from "@/lib/types";
 import { upsertEvent, deleteEvent, setEventStatus } from "./actions";
+import { MonthCalendar } from "@/components/MonthCalendar";
+import { ScheduleTabs } from "@/components/ScheduleTabs";
 
 function localValue(iso: string | null): string {
   if (!iso) return "";
@@ -48,6 +50,19 @@ function EventForm({ event }: { event?: TeamEvent }) {
         <Field label="Start" name="start" required>
           <input id="start" name="start" type="datetime-local" required className="input" defaultValue={localValue(event?.start_time ?? null)} />
         </Field>
+        {!event && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Repeat weekly?" name="repeat">
+              <select id="repeat" name="repeat" className="input" defaultValue="0">
+                <option value="0">No, just once</option>
+                <option value="1">Yes, every week</option>
+              </select>
+            </Field>
+            <Field label="For how many weeks?" name="repeat_weeks">
+              <input id="repeat_weeks" name="repeat_weeks" type="number" min={1} max={30} className="input" defaultValue="6" />
+            </Field>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Arrival" name="arrival">
             <input id="arrival" name="arrival" type="datetime-local" className="input" defaultValue={localValue(event?.arrival_time ?? null)} />
@@ -84,6 +99,9 @@ function EventCard({ event }: { event: TeamEvent }) {
           {(event.location || event.field_number) && (
             <p className="text-sm text-slate-500">
               📍 {[event.location, event.field_number ? `Field ${event.field_number}` : null].filter(Boolean).join(" · ")}
+              {event.location && (
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.location)}`} target="_blank" rel="noopener" className="ml-2 font-semibold text-brand-600">Directions →</a>
+              )}
             </p>
           )}
           {event.notes && <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{event.notes}</p>}
@@ -136,20 +154,28 @@ export default async function SchedulePage({ searchParams }: { searchParams: { e
       {editEvent && <EventForm event={editEvent} />}
       {showAdd && !editEvent && <EventForm />}
 
-      <div>
-        <SectionTitle>Upcoming</SectionTitle>
-        {upcoming.length === 0 ? (
-          <EmptyState title="No upcoming events" hint="Add a game or practice." />
-        ) : (
-          <div className="space-y-3">{upcoming.map((e) => <EventCard key={e.id} event={e} />)}</div>
-        )}
-      </div>
-
-      {past.length > 0 && (
-        <div>
-          <SectionTitle>Past</SectionTitle>
-          <div className="space-y-3 opacity-80">{past.map((e) => <EventCard key={e.id} event={e} />)}</div>
-        </div>
+      {!editEvent && !showAdd && (
+        <ScheduleTabs
+          calendar={<MonthCalendar events={events.map((e) => ({ id: e.id, title: e.title || (e.opponent ? `vs ${e.opponent}` : EVENT_TYPE_LABEL[e.type]), type: e.type, start_time: e.start_time, status: e.status }))} />}
+          list={
+            <div className="space-y-5">
+              <div>
+                <SectionTitle>Upcoming</SectionTitle>
+                {upcoming.length === 0 ? (
+                  <EmptyState title="No upcoming events" hint="Add a game or practice." />
+                ) : (
+                  <div className="space-y-3">{upcoming.map((e) => <EventCard key={e.id} event={e} />)}</div>
+                )}
+              </div>
+              {past.length > 0 && (
+                <div>
+                  <SectionTitle>Past</SectionTitle>
+                  <div className="space-y-3 opacity-80">{past.map((e) => <EventCard key={e.id} event={e} />)}</div>
+                </div>
+              )}
+            </div>
+          }
+        />
       )}
     </div>
   );

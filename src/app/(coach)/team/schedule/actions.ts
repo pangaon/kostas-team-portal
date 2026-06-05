@@ -46,12 +46,30 @@ export async function upsertEvent(formData: FormData) {
 
   if (id) {
     await db.from("events").update(fields).eq("id", id).eq("team_id", team.id);
-  } else {
-    await db.from("events").insert({ ...fields, status: "scheduled", team_id: team.id });
+    revalidatePath("/team/schedule");
+    redirect("/team/schedule?saved=" + encodeURIComponent("Event saved"));
   }
 
+  const repeat = s(formData, "repeat") === "1";
+  const weeks = repeat ? Math.max(1, Math.min(30, parseInt(s(formData, "repeat_weeks"), 10) || 1)) : 1;
+  const startBase = new Date(startIso);
+  const endBase = fields.end_time ? new Date(fields.end_time) : null;
+  const arrBase = fields.arrival_time ? new Date(fields.arrival_time) : null;
+  const rows = Array.from({ length: weeks }, (_, w) => {
+    const shift = w * 7 * 24 * 3600 * 1000;
+    return {
+      ...fields,
+      start_time: new Date(startBase.getTime() + shift).toISOString(),
+      end_time: endBase ? new Date(endBase.getTime() + shift).toISOString() : null,
+      arrival_time: arrBase ? new Date(arrBase.getTime() + shift).toISOString() : null,
+      status: "scheduled" as const,
+      team_id: team.id,
+    };
+  });
+  await db.from("events").insert(rows);
+
   revalidatePath("/team/schedule");
-  redirect("/team/schedule?saved=1");
+  redirect("/team/schedule?saved=" + encodeURIComponent(weeks > 1 ? `Added ${weeks} events` : "Event added"));
 }
 
 export async function deleteEvent(formData: FormData) {
