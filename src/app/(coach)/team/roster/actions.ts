@@ -48,8 +48,8 @@ export async function upsertPlayer(formData: FormData) {
 
   const first_name = s(formData, "first_name");
   const last_name = s(formData, "last_name");
-  if (!first_name || !last_name) {
-    redirect("/team/roster?saved=1");
+  if (!first_name) {
+    redirect("/team/roster?error=" + encodeURIComponent("Enter at least a first name"));
   }
 
   const playerFields = {

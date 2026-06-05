@@ -28,6 +28,13 @@ export async function POST(req: Request) {
       const { data } = await db.from("lineup_plans").insert(row).select("id").single();
       return NextResponse.json({ ok: true, id: (data as { id: string }).id });
     }
+    case "setStrength": {
+      const pid = String(p.playerId || "");
+      const val = Math.max(1, Math.min(5, parseInt(String(p.strength), 10) || 0)) || null;
+      if (!pid) return NextResponse.json({ error: "no player" }, { status: 400 });
+      await db.from("players").update({ strength: val }).eq("id", pid).eq("team_id", team.id);
+      return NextResponse.json({ ok: true, strength: val });
+    }
     case "delete": {
       await db.from("lineup_plans").delete().eq("id", p.id).eq("team_id", team.id);
       return NextResponse.json({ ok: true });

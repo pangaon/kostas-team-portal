@@ -14,6 +14,10 @@ export async function createTeam(formData: FormData) {
   const age_group = String(formData.get("age_group") || "").trim();
   if (!name) return;
   const admin = createAdminClient();
+  // Guard: a coach owns exactly one team. If they already have one, don't
+  // create a duplicate (this caused players to look like they "vanished").
+  const { data: existingTeam } = await admin.from("teams").select("id").eq("created_by", user.id).order("created_at", { ascending: true }).limit(1);
+  if (existingTeam?.[0]) { redirect("/dashboard"); }
   let code = `${slugify(name)}-${season ? slugify(season) : randomCode(4)}`.slice(0, 40);
   // ensure unique
   const { data: exists } = await admin.from("teams").select("id").eq("invite_code", code).maybeSingle();
