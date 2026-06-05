@@ -3,8 +3,9 @@ import { originFromEnv } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Button, Field } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { inviteLink } from "@/lib/whatsapp";
-import { updateTeam, regenerateCode, inviteCoach, removeCoach } from "./actions";
+import { updateTeam, regenerateCode, inviteCoach, removeCoach, updateRules } from "./actions";
 import { SPORT_OPTIONS, sportFromString } from "@/lib/sports";
+import { readTeamRules } from "@/lib/teamrules";
 import { getStaff } from "@/lib/data";
 import { Badge } from "@/components/ui";
 
@@ -14,6 +15,8 @@ export default async function SettingsPage() {
   const staff = await getStaff(team.id);
   const origin = originFromEnv();
   const invite = inviteLink(origin, team.invite_code);
+  const sport = sportFromString(team.sport);
+  const rules = await readTeamRules(team.id);
   const calendarUrl = `${origin}/api/calendar/${team.invite_code}.ics`;
 
   return (
@@ -69,6 +72,28 @@ export default async function SettingsPage() {
             <input id="age_group" name="age_group" className="input" defaultValue={team.age_group ?? ""} />
           </Field>
           <Button type="submit">Save changes</Button>
+        </form>
+      </Card>
+
+      <Card>
+        <SectionTitle>League &amp; game rules</SectionTitle>
+        <p className="mb-3 text-sm text-slate-500">Set your competition&rsquo;s rules once — the live game obeys them. Leave blank to use {sport.label} defaults ({sport.onField} on, {sport.periodCount} × {sport.timed ? `${sport.defaultPeriodMin}min ${sport.periodType.toLowerCase()}s` : sport.periodType.toLowerCase() + "s"}).</p>
+        <form action={updateRules} className="space-y-4">
+          <Field label="League / competition (optional)" name="league">
+            <input id="league" name="league" className="input" defaultValue={rules.league ?? ""} placeholder="e.g. North Toronto Youth Soccer U10" />
+          </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Players on" name="onField">
+              <input id="onField" name="onField" type="number" min={1} max={15} className="input" defaultValue={rules.onField ?? ""} placeholder={String(sport.onField)} />
+            </Field>
+            <Field label={`# of ${sport.periodType.toLowerCase()}s`} name="periodCount">
+              <input id="periodCount" name="periodCount" type="number" min={1} max={9} className="input" defaultValue={rules.periodCount ?? ""} placeholder={String(sport.periodCount)} />
+            </Field>
+            <Field label="Minutes each" name="periodMin">
+              <input id="periodMin" name="periodMin" type="number" min={1} max={60} className="input" defaultValue={rules.periodMin ?? ""} placeholder={String(sport.defaultPeriodMin || "—")} />
+            </Field>
+          </div>
+          <Button type="submit">Save rules</Button>
         </form>
       </Card>
 
