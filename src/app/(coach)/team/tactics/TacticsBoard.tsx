@@ -268,7 +268,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
                   <PlayerAvatar name={`${p.first_name} ${p.last_name}`} photoUrl={p.avatar_url} size={26} />
                   <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: ringColor(p.strength) }} />
                 </span>
-                {p.first_name}
+                <span>{p.jersey_number ? <span className="text-slate-400">#{p.jersey_number} </span> : ""}{p.first_name}</span>
                 {attendingIds.includes(p.id) && <span className="text-emerald-500">✓</span>}
               </div>
             ))}

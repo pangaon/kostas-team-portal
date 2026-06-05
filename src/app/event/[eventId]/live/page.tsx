@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireCoachTeam } from "@/lib/auth";
-import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster, getSubPlans, getSeasonRoster } from "@/lib/data";
+import { getEvent, getResult, getGoals, getPlayersWithGuardians, getGameRoster, getSubPlans, getSeasonRoster, getLineupPlans } from "@/lib/data";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { LiveGameClient } from "./LiveGameClient";
 import { withAvatars } from "@/lib/avatars";
@@ -12,9 +12,9 @@ export default async function LiveGame({ params }: { params: { eventId: string }
   const event = await getEvent(params.eventId);
   if (!event || event.team_id !== team.id) notFound();
 
-  const [result, goals, players, roster, subPlans, season] = await Promise.all([
+  const [result, goals, players, roster, subPlans, season, plans] = await Promise.all([
     getResult(event.id), getGoals(event.id), getPlayersWithGuardians(team.id), getGameRoster(event.id),
-    getSubPlans(event.id), getSeasonRoster(team.id),
+    getSubPlans(event.id), getSeasonRoster(team.id), getLineupPlans(event.id),
   ]);
   const approved = await withAvatars(players.filter((p) => p.status === "approved"));
 
@@ -43,6 +43,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
       initNotes={(result?.notes ?? "").split("\n").filter(Boolean)}
       initSubs={subPlans.map((sp) => ({ id: sp.id, player_in: sp.player_in, player_out: sp.player_out, saved: true }))}
       startsBy={startsBy}
+      plans={plans.map((pl) => ({ id: pl.id, name: pl.name, slots: pl.slots }))}
     />
   );
 }
