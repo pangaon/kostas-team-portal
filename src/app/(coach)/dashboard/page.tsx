@@ -52,6 +52,7 @@ export default async function Dashboard() {
   };
   const noReply = approved.length - (counts.in + counts.out + counts.maybe);
   const nextSnack = next ? snacks.find((s) => s.event_id === next.id) : null;
+  const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const latest = anns[0];
   const invite = inviteLink(origin, team.invite_code);
 
@@ -83,10 +84,10 @@ export default async function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Players" value={approved.length} hint={pending.length ? `${pending.length} pending` : "approved"} />
-        <Stat label="Events" value={events.length} />
-        <Stat label="Next: in" value={next ? counts.in : "—"} hint={next ? `${noReply} no reply` : "no events"} />
-        <Stat label="Snack" value={next ? (nextSnack ? "Claimed" : "Open") : "—"} />
+        <Stat href="/team/roster" label="Players" value={approved.length} hint={pending.length ? `${pending.length} pending approval` : "tap to manage"} />
+        <Stat href="/team/schedule" label="Events" value={events.length} hint="games & practices" />
+        <Stat href={next ? `/event/${next.id}` : "/team/schedule"} label="Next game" value={next ? shortDate(next.start_time) : "—"} hint={next ? `${counts.in} in · ${noReply} awaiting RSVP` : "none scheduled"} />
+        <Stat href="/team/snacks" label="Snack" value={next ? (nextSnack ? "Claimed ✓" : "Open") : "—"} hint={next && !nextSnack ? "needs a volunteer" : "tap to view"} />
       </div>
 
       <div>

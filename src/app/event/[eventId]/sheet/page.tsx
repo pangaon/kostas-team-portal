@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BackBar } from "@/components/BackBar";
 import { notFound } from "next/navigation";
 import { requireCoachTeam } from "@/lib/auth";
@@ -21,6 +22,13 @@ const PRINT_CSS = `
 
 function playerName(p: PlayerWithGuardians): string {
   return `${p.first_name} ${p.last_name}`;
+}
+function NameLink({ p }: { p: PlayerWithGuardians }) {
+  return (
+    <Link href={`/team/roster?edit=${p.id}`} className="text-brand-700 underline-offset-2 hover:underline print:text-black print:no-underline">
+      {p.first_name} {p.last_name}
+    </Link>
+  );
 }
 
 export default async function GameSheetPage({
@@ -90,14 +98,14 @@ export default async function GameSheetPage({
           <h2 className="mb-2 text-lg font-bold">Lineup</h2>
           <p className="mb-1 text-sm font-semibold">Starters</p>
           {starters.length === 0 ? (
-            <p className="text-sm text-slate-500">No starters set.</p>
+            <p className="text-sm text-slate-500">No starters set yet. <Link href={`/team/tactics?event=${event.id}`} className="text-brand-700 underline print:hidden">Build a lineup in Tactics →</Link></p>
           ) : (
             <ul className="mb-3 space-y-0.5 text-sm">
               {starters.map((p) => {
                 const r = rosterByPlayer.get(p.id);
                 return (
                   <li key={p.id}>
-                    <span className="font-medium">{r?.position || "—"}</span> — {playerName(p)}
+                    <span className="font-medium">{r?.position || "—"}</span> — <NameLink p={p} />
                     {p.jersey_number && <span className="text-slate-500"> #{p.jersey_number}</span>}
                   </li>
                 );
@@ -111,7 +119,7 @@ export default async function GameSheetPage({
             <ul className="space-y-0.5 text-sm">
               {bench.map((p) => (
                 <li key={p.id}>
-                  {playerName(p)}
+                  <NameLink p={p} />
                   {p.jersey_number && <span className="text-slate-500"> #{p.jersey_number}</span>}
                 </li>
               ))}
@@ -138,7 +146,7 @@ export default async function GameSheetPage({
                 return (
                   <tr key={p.id}>
                     <td>{p.jersey_number || "—"}</td>
-                    <td>{playerName(p)}</td>
+                    <td><NameLink p={p} /></td>
                     <td style={p.allergies ? { color: "#b91c1c", fontWeight: 700 } : undefined}>
                       {p.allergies || "—"}
                     </td>

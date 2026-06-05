@@ -9,7 +9,7 @@ export default async function CoachLayout({ children }: { children: React.ReactN
     <div className="min-h-screen">
       <Suspense>{<SaveToast />}</Suspense>
       {team && <CoachNav teamName={team.name} />}
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-5">{children}</main>
+      <main className="mx-auto max-w-3xl px-4 pb-28 pt-5 lg:mx-0 lg:ml-60 lg:max-w-4xl lg:pb-10 lg:pl-8 lg:pr-8 lg:pt-8">{children}</main>
     </div>
   );
 }

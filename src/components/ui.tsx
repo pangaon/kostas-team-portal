@@ -59,14 +59,25 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
-  return (
-    <Card className="flex flex-col justify-between">
+export function Stat({ label, value, hint, href }: { label: string; value: ReactNode; hint?: string; href?: string }) {
+  const inner = (
+    <>
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-bold">{value}</p>
       {hint && <p className="text-xs text-slate-400">{hint}</p>}
-    </Card>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        <Card className="flex h-full flex-col justify-between transition hover:border-brand-300 hover:shadow-md active:scale-[0.98]">
+          {inner}
+          <span className="mt-1 text-[11px] font-semibold text-brand-600">Open →</span>
+        </Card>
+      </Link>
+    );
+  }
+  return <Card className="flex flex-col justify-between">{inner}</Card>;
 }
 
 export function Field({ label, name, children, error, required }: { label: string; name?: string; children?: ReactNode; error?: string; required?: boolean }) {

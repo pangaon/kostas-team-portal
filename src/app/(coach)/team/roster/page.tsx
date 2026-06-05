@@ -20,8 +20,8 @@ function PlayerForm({ player }: { player?: PlayerWithGuardians }) {
           <Field label="First name" name="first_name" required>
             <input id="first_name" name="first_name" required className="input" defaultValue={player?.first_name ?? ""} />
           </Field>
-          <Field label="Last name" name="last_name" required>
-            <input id="last_name" name="last_name" required className="input" defaultValue={player?.last_name ?? ""} />
+          <Field label="Last name" name="last_name">
+            <input id="last_name" name="last_name" className="input" defaultValue={player?.last_name ?? ""} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
