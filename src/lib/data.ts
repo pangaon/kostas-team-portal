@@ -150,3 +150,50 @@ export async function getNotifications(teamId: string, limit = 60): Promise<{ id
   const { data } = await a.from("notifications").select("id, kind, title, body, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(limit);
   return (data as { id: string; kind: string; title: string; body: string | null; created_at: string }[]) ?? [];
 }
+
+export const COACH_SENDER = "__coach__";
+export type ChatMsg = { id: string; player_id: string | null; from_name: string | null; body: string; is_read: boolean; created_at: string; fromCoach: boolean };
+export type ChatThread = { key: string; playerId: string | null; name: string; last: string; lastAt: string; unread: number; count: number };
+
+export async function getCoachThreads(teamId: string): Promise<ChatThread[]> {
+  const a = createAdminClient();
+  const [{ data: rows }, { data: players }] = await Promise.all([
+    a.from("coach_inbox").select("*").eq("team_id", teamId).order("created_at", { ascending: true }),
+    a.from("players").select("id, first_name, last_name, jersey_number").eq("team_id", teamId),
+  ]);
+  const pmap = new Map((players ?? []).map((p: { id: string; first_name: string; last_name: string }) => [p.id, `${p.first_name} ${p.last_name}`]));
+  const groups = new Map<string, ChatThread>();
+  for (const r of (rows ?? []) as { id: string; player_id: string | null; from_name: string | null; body: string; is_read: boolean; created_at: string }[]) {
+    const key = r.player_id ?? "general";
+    const name = r.player_id ? (pmap.get(r.player_id) ?? "A parent") : "General";
+    const fromCoach = r.from_name === COACH_SENDER;
+    const g = groups.get(key) ?? { key, playerId: r.player_id, name, last: "", lastAt: r.created_at, unread: 0, count: 0 };
+    g.last = (fromCoach ? "You: " : "") + r.body;
+    g.lastAt = r.created_at;
+    g.count += 1;
+    if (!fromCoach && !r.is_read) g.unread += 1;
+    groups.set(key, g);
+  }
+  return [...groups.values()].sort((x, y) => (y.unread - x.unread) || (new Date(y.lastAt).getTime() - new Date(x.lastAt).getTime()));
+}
+
+export async function getCoachThread(teamId: string, playerKey: string): Promise<{ name: string; messages: ChatMsg[] }> {
+  const a = createAdminClient();
+  let q = a.from("coach_inbox").select("*").eq("team_id", teamId).order("created_at", { ascending: true });
+  q = playerKey === "general" ? q.is("player_id", null) : q.eq("player_id", playerKey);
+  const { data: rows } = await q;
+  let name = "General";
+  if (playerKey !== "general") {
+    const { data: p } = await a.from("players").select("first_name, last_name").eq("id", playerKey).maybeSingle();
+    if (p) name = `${(p as { first_name: string }).first_name} ${(p as { last_name: string }).last_name}`;
+  }
+  const messages = ((rows ?? []) as { id: string; player_id: string | null; from_name: string | null; body: string; is_read: boolean; created_at: string }[])
+    .map((r) => ({ ...r, fromCoach: r.from_name === COACH_SENDER }));
+  return { name, messages };
+}
+
+export async function getTotalUnread(teamId: string): Promise<number> {
+  const a = createAdminClient();
+  const { count } = await a.from("coach_inbox").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("is_read", false).neq("from_name", COACH_SENDER);
+  return count ?? 0;
+}

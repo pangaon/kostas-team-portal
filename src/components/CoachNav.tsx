@@ -14,7 +14,6 @@ const more = [
   { href: "/team/attendance", label: "Attendance", icon: "✅" },
   { href: "/team/snacks", label: "Snacks", icon: "🍎" },
   { href: "/team/poll", label: "Practice poll", icon: "📋" },
-  { href: "/team/inbox", label: "Parent notes", icon: "✉️" },
   { href: "/team/announcements", label: "Announce", icon: "📣" },
   { href: "/team/notifications", label: "Alerts sent", icon: "🔔" },
   { href: "/team/messages", label: "Messages", icon: "💬" },

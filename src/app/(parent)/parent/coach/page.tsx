@@ -1,5 +1,5 @@
 import { getParentSession } from "@/lib/parent";
-import { getPolls, getPollOptions, getPollVotes } from "@/lib/data";
+import { getPolls, getPollOptions, getPollVotes, getCoachThread } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState } from "@/components/ui";
 import { votePoll, sendCoachNote } from "@/lib/parent-actions";
 
@@ -9,6 +9,7 @@ export default async function ParentCoachPage() {
   const sess = await getParentSession();
   if (!sess) return null;
   const polls = (await getPolls(sess.team.id)).filter((p) => p.status === "open");
+  const { messages } = await getCoachThread(sess.team.id, sess.player.id);
 
   return (
     <div className="space-y-5">
@@ -52,13 +53,23 @@ export default async function ParentCoachPage() {
       </div>
 
       <div>
-        <SectionTitle>Message the coach</SectionTitle>
+        <SectionTitle>Chat with the coach</SectionTitle>
         <Card>
+          {messages.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {messages.map((m) => (
+                <div key={m.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.fromCoach ? "bg-brand-600 text-white" : "ml-auto border border-slate-200 bg-white text-ink"}`}>
+                  <p className="whitespace-pre-line">{m.body}</p>
+                  <p className={`mt-1 text-[10px] ${m.fromCoach ? "text-brand-100" : "text-slate-400"}`}>{m.fromCoach ? "Coach" : "You"}</p>
+                </div>
+              ))}
+            </div>
+          )}
           <form action={sendCoachNote} className="space-y-3">
-            <textarea name="body" required rows={3} className="input" placeholder="Notes, questions, or anything the coach should know…" />
-            <Button type="submit">Send to coach</Button>
+            <textarea name="body" required rows={2} className="input" placeholder="Message the coach…" />
+            <Button type="submit">Send</Button>
           </form>
-          <p className="mt-2 text-xs text-slate-400">Goes privately to the coach only.</p>
+          <p className="mt-2 text-xs text-slate-400">Private — only your coach sees this.</p>
         </Card>
       </div>
     </div>

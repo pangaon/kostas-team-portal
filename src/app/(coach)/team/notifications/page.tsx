@@ -2,6 +2,7 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getNotifications } from "@/lib/data";
 import { PageTitle, Card, EmptyState } from "@/components/ui";
 import { sendTodayReminders } from "@/app/(coach)/dashboard/actions";
+import { deleteNotification, clearNotifications } from "./actions";
 import { fmtDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,10 @@ export default async function NotificationsPage() {
           <p className="font-semibold text-ink">Game-day reminders</p>
           <p className="text-sm text-slate-600">Auto-send every game morning at 8am. Send now or test:</p>
         </div>
-        <form action={sendTodayReminders}><button className="btn-primary">📣 Send today&rsquo;s reminders</button></form>
+        <div className="flex gap-2">
+          <form action={sendTodayReminders}><button className="btn-primary">📣 Send today&rsquo;s reminders</button></form>
+          {items.length > 0 && <form action={clearNotifications}><button className="btn-ghost text-rose-600">Clear all</button></form>}
+        </div>
       </Card>
 
       <div>
@@ -37,6 +41,7 @@ export default async function NotificationsPage() {
                   {n.body && <p className="text-sm text-slate-600">{n.body}</p>}
                   <p className="mt-0.5 text-xs text-slate-400">{fmtDateTime(n.created_at)}</p>
                 </div>
+                <form action={deleteNotification}><input type="hidden" name="id" value={n.id} /><button aria-label="Delete" className="shrink-0 text-slate-300 hover:text-rose-500">✕</button></form>
               </Card>
             ))}
           </div>
