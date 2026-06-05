@@ -136,6 +136,8 @@ export function LiveGameClient(props: {
   const onField = players.filter((p) => field[p.id]?.status === "starter");
   const bench = players.filter((p) => field[p.id]?.status !== "starter");
   const benchByMins = [...bench].sort((a, b) => liveMins(a.id) - liveMins(b.id));
+  const pendingOut = new Set(subs.map((x) => x.player_out));
+  const pendingIn = new Set(subs.map((x) => x.player_in));
   const posCount = (c: string) => onField.filter((p) => field[p.id]?.position === c).length;
   const hasGK = onField.some((p) => field[p.id]?.position === "GK");
 
@@ -320,7 +322,7 @@ export function LiveGameClient(props: {
         {onField.map((p) => (
           <div key={p.id} className={`flex items-center gap-2 rounded-xl border p-2 ${field[p.id]?.position === "GK" ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
             <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={32} />
-            <span className="flex-1 text-sm font-semibold">{field[p.id]?.position === "GK" ? "🧤 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}</span>
+            <span className="flex-1 text-sm font-semibold">{field[p.id]?.position === "GK" ? "🧤 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}{pendingOut.has(p.id) && <span className="ml-1 rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-700">SUBBING OFF</span>}</span>
             <span className="text-xs font-semibold tabular-nums text-slate-400">{fmtMin(liveMins(p.id))}</span>
             <select value={field[p.id]?.position ?? ""} onChange={(e) => setPos(p.id, e.target.value)} className="input !w-auto py-1 text-sm">
               <option value="">pos</option>{POSITIONS.map((x) => <option key={x} value={x}>{x}</option>)}
@@ -333,7 +335,7 @@ export function LiveGameClient(props: {
       <div className="flex flex-wrap gap-2">
         {benchByMins.map((p, i) => (
           <button key={p.id} onClick={() => toggleField(p.id)} className={`flex items-center gap-1.5 rounded-full border bg-white py-1 pl-1 pr-3 text-sm font-semibold text-ink active:scale-95 ${i === 0 ? "border-emerald-400 ring-1 ring-emerald-200" : "border-slate-300"}`}>
-            <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={24} />{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}<span className="text-xs text-slate-400">{fmtMin(liveMins(p.id))}</span>
+            <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={24} />{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}<span className="text-xs text-slate-400">{fmtMin(liveMins(p.id))}</span>{pendingIn.has(p.id) && <span className="ml-1 rounded bg-brand-100 px-1 text-[9px] font-bold text-brand-700">ON DECK</span>}
           </button>
         ))}
       </div>
@@ -352,8 +354,8 @@ export function LiveGameClient(props: {
         </div>
       )}
       <div className="grid grid-cols-2 gap-2">
-        <select value={outSel} onChange={(e) => setOutSel(e.target.value)} className="input py-2 text-sm"><option value="">Coming OFF…</option>{onField.map((p) => <option key={p.id} value={p.id}>{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}{field[p.id]?.position ? ` (${field[p.id]?.position})` : ""}</option>)}</select>
-        <select value={inSel} onChange={(e) => setInSel(e.target.value)} className="input py-2 text-sm"><option value="">Going ON…</option>{benchByMins.map((p, i) => <option key={p.id} value={p.id}>{i === 0 ? "💡 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""} · {fmtMin(liveMins(p.id))}</option>)}</select>
+        <select value={outSel} onChange={(e) => setOutSel(e.target.value)} className="input py-2 text-sm"><option value="">Coming OFF…</option>{onField.filter((p) => !pendingOut.has(p.id)).map((p) => <option key={p.id} value={p.id}>{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}{field[p.id]?.position ? ` (${field[p.id]?.position})` : ""}</option>)}</select>
+        <select value={inSel} onChange={(e) => setInSel(e.target.value)} className="input py-2 text-sm"><option value="">Going ON…</option>{benchByMins.filter((p) => !pendingIn.has(p.id)).map((p, i) => <option key={p.id} value={p.id}>{i === 0 ? "💡 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""} · {fmtMin(liveMins(p.id))}</option>)}</select>
       </div>
       <button onClick={planSub} className="btn-ghost mt-2 w-full">Add to on deck</button>
 
