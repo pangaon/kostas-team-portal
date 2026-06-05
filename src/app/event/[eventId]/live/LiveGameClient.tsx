@@ -30,7 +30,7 @@ export function LiveGameClient(props: {
   const [noteText, setNoteText] = useState("");
   const [outSel, setOutSel] = useState("");
   const [inSel, setInSel] = useState("");
-  const [showMins, setShowMins] = useState(true);
+  const [showMins, setShowMins] = useState(false);
 
   // ---------- clock w/ halves + playing-time ----------
   const ckey = `live_v2_${eventId}`;
@@ -42,6 +42,7 @@ export function LiveGameClient(props: {
   const startedRef = useRef<number | null>(null);
   const minsRef = useRef<Record<string, number>>({});      // committed seconds played
   const onSinceRef = useRef<Record<string, number | null>>({});
+  const lastWrittenRef = useRef(0);
 
   const persist = useCallback(() => {
     try { localStorage.setItem(ckey, JSON.stringify({ halfLen, half, base: baseRef.current, startedAt: startedRef.current, mins: minsRef.current, onSince: onSinceRef.current })); } catch {}
@@ -58,6 +59,34 @@ export function LiveGameClient(props: {
       }
     } catch {}
   }, [ckey]);
+
+  // ---- cross-device sync (clock + minutes via server) ----
+  const stateBlob = () => ({ halfLen, half, base: baseRef.current, startedAt: startedRef.current, mins: minsRef.current, onSince: onSinceRef.current, writtenAt: Date.now() });
+  const applyState = (st: Record<string, unknown> | null) => {
+    if (!st) return;
+    if (typeof st.halfLen === "number") setHalfLen(st.halfLen);
+    if (typeof st.half === "number") setHalf(st.half);
+    baseRef.current = (st.base as number) ?? 0;
+    startedRef.current = (st.startedAt as number | null) ?? null;
+    minsRef.current = (st.mins as Record<string, number>) ?? {};
+    onSinceRef.current = (st.onSince as Record<string, number | null>) ?? {};
+    setRunning(!!st.startedAt);
+    lastWrittenRef.current = (st.writtenAt as number) ?? lastWrittenRef.current;
+    setTick((n) => n + 1);
+  };
+  const persistServer = () => { const blob = stateBlob(); lastWrittenRef.current = blob.writtenAt; post("stateSet", { state: blob }); };
+  useEffect(() => {
+    let alive = true;
+    (async () => { const r = await post("stateGet", {}); if (alive && r?.state) applyState(r.state); })();
+    const poll = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      const r = await post("stateGet", {});
+      const w = r?.state?.writtenAt as number | undefined;
+      if (w && w > lastWrittenRef.current) applyState(r.state);
+    }, 10000);
+    return () => { alive = false; clearInterval(poll); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!running) return;
@@ -85,17 +114,17 @@ export function LiveGameClient(props: {
   const toggleClock = () => {
     if (running) { baseRef.current = secInHalf; startedRef.current = null; flushMins(); setRunning(false); }
     else { startedRef.current = Date.now(); startAccrual(field); setRunning(true); }
-    setTimeout(persist, 0);
+    setTimeout(() => { persist(); persistServer(); }, 0);
   };
-  const startSecondHalf = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf(2); setTimeout(persist, 0); };
-  const resetClock = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; minsRef.current = {}; setRunning(false); setHalf(1); setTick((n) => n + 1); setTimeout(persist, 0); };
+  const startSecondHalf = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; setRunning(false); setHalf(2); setTimeout(() => { persist(); persistServer(); }, 0); };
+  const resetClock = () => { flushMins(); baseRef.current = 0; startedRef.current = null; onSinceRef.current = {}; minsRef.current = {}; setRunning(false); setHalf(1); setTick((n) => n + 1); setTimeout(() => { persist(); persistServer(); }, 0); };
 
   // ---------- field mutations (keep minutes correct) ----------
   const setFieldTracked = (next: FieldState) => {
     flushMins();
     setField(next);
     if (running) startAccrual(next);
-    setTimeout(persist, 0);
+    setTimeout(() => { persist(); persistServer(); }, 0);
   };
 
   const post = useCallback(async (op: string, payload: Record<string, unknown>) => {
@@ -198,7 +227,7 @@ export function LiveGameClient(props: {
         </div>
         <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400">
           <Timer size={12} /> Half length
-          <select value={halfLen} onChange={(e) => { setHalfLen(parseInt(e.target.value, 10)); setTimeout(persist, 0); }} className="rounded bg-white/10 px-1 py-0.5 text-white">
+          <select value={halfLen} onChange={(e) => { setHalfLen(parseInt(e.target.value, 10)); setTimeout(() => { persist(); persistServer(); }, 0); }} className="rounded bg-white/10 px-1 py-0.5 text-white">
             {[20, 25, 30, 35, 40, 45].map((n) => <option key={n} value={n} className="text-ink">{n} min</option>)}
           </select>
         </div>
@@ -235,7 +264,7 @@ export function LiveGameClient(props: {
       {/* Playing time tracker */}
       <div className="mb-4 rounded-2xl border border-slate-200 bg-white">
         <button onClick={() => setShowMins((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-ink">
-          <span>⏱️ Playing time — fair-play tracker</span><span className="text-slate-400">{showMins ? "▲" : "▼"}</span>
+          <span className="flex items-center gap-2">⏱️ Playing time{!showMins && <span className="text-xs font-normal text-slate-400">{onField.length} on · least {fmtMin(Math.min(...players.map((p) => liveMins(p.id)), 0))}</span>}</span><span className="text-slate-400">{showMins ? "▲" : "▼"}</span>
         </button>
         {showMins && (
           <div className="space-y-1.5 border-t border-slate-100 px-3 py-2">

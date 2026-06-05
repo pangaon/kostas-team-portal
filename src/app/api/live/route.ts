@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCoachTeam } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readGameState, writeGameState } from "@/lib/gamestate";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,14 @@ export async function POST(req: Request) {
         await db.from("game_roster").upsert({ team_id: team.id, event_id: eventId, player_id: pl.player_in, status: "starter", position: pos }, { onConflict: "event_id,player_id" });
         await db.from("sub_plans").update({ status: "done" }).eq("id", p.id);
       }
+      return NextResponse.json({ ok: true });
+    }
+    case "stateGet": {
+      const state = await readGameState(eventId);
+      return NextResponse.json({ ok: true, state });
+    }
+    case "stateSet": {
+      await writeGameState(eventId, (p.state ?? {}) as Record<string, unknown>);
       return NextResponse.json({ ok: true });
     }
     default:
