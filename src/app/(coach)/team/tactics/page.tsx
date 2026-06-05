@@ -3,6 +3,7 @@ import { getPlayers, getEvents, getLineupPlans, getAttendance, nextEvent } from 
 import { PageTitle, EmptyState, Card } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import { TacticsBoard } from "./TacticsBoard";
+import { Onboarding } from "@/components/Onboarding";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
   return (
     <div className="space-y-4">
       <PageTitle title="Tactics" subtitle="Drag your squad onto the pitch — try formations, save plans, push to the game." />
+      <Onboarding id="tactics_v1" title="🎯 How the pitch works" steps={["Pick a formation up top.","Tap a player chip, then tap a spot on the pitch to place them.","Players are colored by strength rating (set it in Roster).","Save the plan, then tap \u201cUse this lineup in the game\u201d to load it into the live console."]} />
       <Card className="!p-2">
         <div className="flex gap-2 overflow-x-auto">
           {games.map((g) => (

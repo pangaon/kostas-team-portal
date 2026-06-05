@@ -5,6 +5,7 @@ import { setAttendance, switchChild } from "@/lib/parent-actions";
 import { fmtDateTime, fmtDate } from "@/lib/format";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState } from "@/components/ui";
 import { PushControls } from "@/components/PushControls";
+import { Onboarding } from "@/components/Onboarding";
 import { EVENT_TYPE_LABEL, ATT_LABEL } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,16 @@ export default async function ParentHome() {
 
   return (
     <div className="space-y-4">
+      <Onboarding
+        id="parent_v1"
+        title={`👋 Welcome to ${team.name}!`}
+        steps={[
+          "Tap \u201cI'll be there\u201d / \u201cCan't make it\u201d on the next game so coach knows who's coming.",
+          "Turn on notifications below to get game-day reminders \u2014 no more WhatsApp needed.",
+          "Snacks: sign up to bring snacks for a game when it's your turn.",
+          "Add to home screen: tap your browser's Share \u2192 Add to Home Screen for a one-tap app.",
+        ]}
+      />
       <PageTitle
         title={`Hi! ${player.first_name}${player.jersey_number ? ` #${player.jersey_number}` : ""}`}
         subtitle={team.name}

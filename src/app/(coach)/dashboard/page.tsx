@@ -10,6 +10,8 @@ import { EVENT_TYPE_LABEL } from "@/lib/types";
 import { inviteLink } from "@/lib/whatsapp";
 import { createTeam, sendTestAlert, sendTodayReminders } from "./actions";
 import { CoachPushControls } from "@/components/CoachPushControls";
+import { Onboarding } from "@/components/Onboarding";
+import { Hint } from "@/components/Hint";
 
 export default async function Dashboard() {
   const { team } = await getCoachTeam();
@@ -55,6 +57,17 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-5">
+      <Onboarding
+        id="coach_v1"
+        title="👋 Welcome, coach! Here's your 60-second setup"
+        steps={[
+          "Roster: add your players (tap 👥 Roster). Set a strength rating to color them on the pitch.",
+          "Schedule: add your games & practices so reminders and the live console work.",
+          "Invite parents: share your team link (below) — they join with no password.",
+          "Tactics: tap 🎯 to build a lineup on the pitch, then push it into the live game.",
+          "Turn on notifications below so you get game-day reminders automatically.",
+        ]}
+      />
       <PageTitle title={team.name} subtitle={`${team.sport ?? ""} · ${team.age_group ?? ""} · ${team.season ?? ""}`} />
 
       {pending.length > 0 && (
@@ -77,7 +90,7 @@ export default async function Dashboard() {
       </div>
 
       <div>
-        <SectionTitle>Registrations</SectionTitle>
+        <SectionTitle><span className="inline-flex items-center gap-1.5">Registrations <Hint text="Joined = parent linked their child. Pending = invited but not joined yet. Share your team link to get everyone on." /></span></SectionTitle>
         <Card>
           <div className="flex flex-wrap items-center gap-2">
             <Badge color="green">{joined.length} joined</Badge>
@@ -136,7 +149,7 @@ export default async function Dashboard() {
       </div>
 
       <div>
-        <SectionTitle>Notifications</SectionTitle>
+        <SectionTitle><span className="inline-flex items-center gap-1.5">Notifications <Hint text="Game-day reminders auto-send at 8am to every parent who turned on alerts. No more manual WhatsApp messages." /></span></SectionTitle>
         <Card>
           <p className="text-sm text-slate-600">Alerts reach parents who turn them on. Enable them for your own device, then send a test to confirm.</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
