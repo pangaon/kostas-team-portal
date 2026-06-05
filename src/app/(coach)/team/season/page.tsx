@@ -4,11 +4,15 @@ import { Card, PageTitle, SectionTitle, Badge, Button, Stat, EmptyState } from "
 import { fmtDate } from "@/lib/format";
 import { saveResult, addGoal, removeGoal } from "./actions";
 import type { Player, TeamEvent } from "@/lib/types";
+import { sportFromString } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
 export default async function SeasonPage() {
   const { team } = await requireCoachTeam();
+  const sport = sportFromString(team.sport);
+  const term = sport.scoreTerm;
+  const termPlural = term + "s";
   const [players, events, results, goals] = await Promise.all([
     getPlayers(team.id), getEvents(team.id), getResults(team.id), getSeasonGoals(team.id),
   ]);
@@ -48,12 +52,12 @@ export default async function SeasonPage() {
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Season" subtitle="Results, record and top scorers" />
+      <PageTitle title="Season" subtitle={`Results, record and top ${termPlural.toLowerCase()}`} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Record (W-D-L)" value={`${w}-${d}-${l}`} hint={`${pts} pts`} />
-        <Stat label="Goals for" value={gf} />
-        <Stat label="Goals against" value={ga} />
-        <Stat label="Goal diff" value={(gf - ga >= 0 ? "+" : "") + (gf - ga)} />
+        <Stat label={`${termPlural} for`} value={gf} />
+        <Stat label={`${termPlural} against`} value={ga} />
+        <Stat label={`${term} diff`} value={(gf - ga >= 0 ? "+" : "") + (gf - ga)} />
       </div>
 
       {form.length > 0 && (
@@ -66,14 +70,14 @@ export default async function SeasonPage() {
       )}
 
       <div>
-        <SectionTitle>Top scorers</SectionTitle>
-        {scorers.length === 0 ? <EmptyState title="No goals recorded yet" hint="Add goals under each game below." /> : (
+        <SectionTitle>Top {termPlural.toLowerCase()}</SectionTitle>
+        {scorers.length === 0 ? <EmptyState title={`No ${termPlural.toLowerCase()} recorded yet`} hint={`Add ${termPlural.toLowerCase()} under each ${sport.noun} below.`} /> : (
           <Card>
             <ol className="divide-y divide-slate-100">
               {scorers.map((s, i) => (
                 <li key={s.id} className="flex items-center justify-between py-2">
                   <span className="font-medium">{i + 1}. {nameOf(s.id)}</span>
-                  <span className="text-sm text-slate-500">{s.n} {s.n === 1 ? "goal" : "goals"}{s.a ? ` · ${s.a} ast` : ""}</span>
+                  <span className="text-sm text-slate-500">{s.n} {s.n === 1 ? term.toLowerCase() : termPlural.toLowerCase()}{s.a ? ` · ${s.a} ast` : ""}</span>
                 </li>
               ))}
             </ol>
@@ -82,7 +86,7 @@ export default async function SeasonPage() {
       </div>
 
       <div>
-        <SectionTitle>Games — record scores &amp; goals</SectionTitle>
+        <SectionTitle>{sport.noun === "match" ? "Matches" : "Games"} — record scores &amp; {termPlural.toLowerCase()}</SectionTitle>
         <div className="space-y-3">
           {games.map((g) => {
             const r = resByEvent.get(g.id);
@@ -123,7 +127,7 @@ export default async function SeasonPage() {
                       <select name="assist_player_id" className="input py-2"><option value="">—</option>
                         {approved.map((p: Player) => <option key={p.id} value={p.id}>{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}</option>)}
                       </select></div>
-                    <Button type="submit" variant="secondary" className="py-2">+ Goal</Button>
+                    <Button type="submit" variant="secondary" className="py-2">+ {term}</Button>
                   </form>
                 </div>
               </Card>
