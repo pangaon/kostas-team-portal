@@ -3,7 +3,7 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getPlayersWithGuardians } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import type { PlayerWithGuardians, Guardian } from "@/lib/types";
-import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers } from "./actions";
+import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending } from "./actions";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 
@@ -117,6 +117,18 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
     });
 
   const approvedA = await withAvatars(approved);
+  const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
+  const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
+    const pc = contactsOf(pend);
+    const fn = pend.first_name.toLowerCase();
+    return approved.find((a) => {
+      const ac = contactsOf(a);
+      const sharedContact = [...pc].some((c) => ac.has(c));
+      const sameName = a.first_name.toLowerCase() === fn && a.last_name.toLowerCase() === pend.last_name.toLowerCase();
+      const sameFirstShared = a.first_name.toLowerCase() === fn && sharedContact;
+      return sharedContact || sameName || sameFirstShared;
+    });
+  };
   const nameKey = (p: { first_name: string; last_name: string }) => `${p.first_name} ${p.last_name}`.toLowerCase().trim();
   const nameCounts: Record<string, number> = {};
   approved.forEach((p) => { nameCounts[nameKey(p)] = (nameCounts[nameKey(p)] ?? 0) + 1; });
@@ -166,10 +178,21 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                       {p.allergies && <p className="mt-1 text-sm text-rose-700">Allergies: {p.allergies}</p>}
                     </div>
                   </div>
+                  {(() => { const dup = findDup(p); return dup ? (
+                    <div className="mt-3 rounded-xl border border-amber-300 bg-white p-3">
+                      <p className="text-sm font-semibold text-amber-900">⚠ Looks like {dup.first_name} {dup.last_name} who&rsquo;s already on your roster.</p>
+                      <p className="text-xs text-slate-500">Probably the same child re-registered. Merge keeps the existing player and folds in any new info (like updated allergies).</p>
+                      <form action={mergePending} className="mt-2">
+                        <input type="hidden" name="pending" value={p.id} />
+                        <input type="hidden" name="target" value={dup.id} />
+                        <Button type="submit">Merge into {dup.first_name}</Button>
+                      </form>
+                    </div>
+                  ) : null; })()}
                   <div className="mt-3 flex gap-2">
                     <form action={approvePlayer}>
                       <input type="hidden" name="id" value={p.id} />
-                      <Button type="submit">Approve</Button>
+                      <Button type="submit">Approve as new</Button>
                     </form>
                     <form action={rejectPlayer}>
                       <input type="hidden" name="id" value={p.id} />

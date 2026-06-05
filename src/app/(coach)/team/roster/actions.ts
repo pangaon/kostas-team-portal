@@ -141,3 +141,35 @@ export async function bulkAddPlayers(formData: FormData) {
   revalidatePath("/team/roster");
   redirect("/team/roster?saved=" + encodeURIComponent(`Added ${rows.length} player${rows.length === 1 ? "" : "s"}`));
 }
+
+export async function mergePending(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  const pendingId = s(formData, "pending");
+  const targetId = s(formData, "target");
+  if (!pendingId || !targetId) redirect("/team/roster");
+
+  const { data: pend } = await db.from("players").select("*").eq("id", pendingId).eq("team_id", team.id).maybeSingle();
+  const { data: targ } = await db.from("players").select("*").eq("id", targetId).eq("team_id", team.id).maybeSingle();
+  if (!pend || !targ) redirect("/team/roster");
+  const P = pend as Record<string, unknown>; const T = targ as Record<string, unknown>;
+
+  const upd: Record<string, unknown> = { claimed: true };
+  // updated safety info from the parent wins
+  for (const k of ["allergies", "medical_notes", "emergency_contact_name", "emergency_contact_phone"]) if (P[k]) upd[k] = P[k];
+  // fill blanks only
+  for (const k of ["jersey_number", "preferred_position", "strong_foot", "strength"]) if (!T[k] && P[k]) upd[k] = P[k];
+  await db.from("players").update(upd).eq("id", targetId).eq("team_id", team.id);
+
+  // move guardians, skip duplicates by phone
+  const { data: tg } = await db.from("guardians").select("phone").eq("player_id", targetId);
+  const have = new Set((tg ?? []).map((g: { phone: string | null }) => g.phone).filter(Boolean));
+  const { data: pg } = await db.from("guardians").select("id, phone").eq("player_id", pendingId);
+  for (const g of (pg ?? []) as { id: string; phone: string | null }[]) {
+    if (g.phone && have.has(g.phone)) continue;
+    await db.from("guardians").update({ player_id: targetId }).eq("id", g.id);
+  }
+  await db.from("players").delete().eq("id", pendingId).eq("team_id", team.id);
+  revalidatePath("/team/roster");
+  redirect("/team/roster?saved=" + encodeURIComponent("Merged into existing player"));
+}

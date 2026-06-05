@@ -64,6 +64,28 @@ export async function joinTeam(
   }
   const v = parsed.data;
 
+  // ---- De-dupe: is this the same kid re-registering? Match on a guardian phone. ----
+  const g1phone = nullable(v.g1_phone ?? "");
+  if (g1phone) {
+    const { data: gmatch } = await db.from("guardians").select("player_id").eq("team_id", teamId).eq("phone", g1phone);
+    const ids = [...new Set((gmatch ?? []).map((g: { player_id: string }) => g.player_id))];
+    if (ids.length) {
+      const { data: existing } = await db.from("players").select("*").in("id", ids).limit(1).maybeSingle();
+      if (existing) {
+        const E = existing as Record<string, unknown> & { id: string; access_token: string };
+        const upd: Record<string, unknown> = { claimed: true };
+        // refresh safety info the parent just entered
+        for (const [k, val] of [["allergies", v.allergies], ["medical_notes", v.medical_notes], ["emergency_contact_name", v.emergency_contact_name], ["emergency_contact_phone", v.emergency_contact_phone]] as const) {
+          if (val && String(val).trim()) upd[k] = val;
+        }
+        for (const [k, val] of [["jersey_number", v.jersey_number]] as const) { if (!E[k] && val) upd[k] = val; }
+        await db.from("players").update(upd).eq("id", E.id);
+        addChildCookie(E.access_token);
+        redirect(`/join/${inviteCode}/success`);
+      }
+    }
+  }
+
   const { data: playerRow, error: playerErr } = await db
     .from("players")
     .insert({
