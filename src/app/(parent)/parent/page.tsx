@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { readIntake, intakeEmpty } from "@/lib/parentintake";
 import { getParentSession, getParentChildren } from "@/lib/parent";
 import { getEvents, getAttendance, getAnnouncements, getSnacks, nextEvent } from "@/lib/data";
 import { setAttendance, switchChild } from "@/lib/parent-actions";
@@ -18,6 +19,7 @@ export default async function ParentHome() {
   const session = await getParentSession();
   if (!session) return null; // layout already guards this
   const { player, team } = session;
+  const intakeMissing = intakeEmpty(await readIntake(player.id));
 
   const children = await getParentChildren();
   const events = await getEvents(team.id);
@@ -50,6 +52,12 @@ export default async function ParentHome() {
           "Add to home screen: tap your browser's Share \u2192 Add to Home Screen for a one-tap app.",
         ]}
       />
+      {intakeMissing && (
+        <Link href="/parent/profile" className="block rounded-2xl border border-brand-200 bg-brand-50 p-3">
+          <p className="text-sm font-semibold text-brand-900">💛 Help your coach get to know {player.first_name} →</p>
+          <p className="text-xs text-brand-800">A couple lines about your kid as a person and a player — it really helps the coach.</p>
+        </Link>
+      )}
       <PageTitle
         title={`Hi! ${player.first_name}${player.jersey_number ? ` #${player.jersey_number}` : ""}`}
         subtitle={team.name}

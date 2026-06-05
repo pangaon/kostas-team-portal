@@ -8,6 +8,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 import { CoachPlayerTools } from "@/components/CoachPlayerTools";
 import { readProfiles } from "@/lib/playerprofile";
+import { readIntakes } from "@/lib/parentintake";
 
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
@@ -120,6 +121,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
 
   const approvedA = await withAvatars(approved);
   const skillsByPlayer = await readProfiles(approvedA.map((p) => p.id));
+  const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
   const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
     const pc = contactsOf(pend);
@@ -255,7 +257,15 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                 </details>
                 <details className="border-t border-slate-100">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600">🧠 Coach tools — skills &amp; send a tip</summary>
-                  <div className="px-3 pb-3">
+                  <div className="space-y-3 px-3 pb-3">
+                    {intakeByPlayer[p.id] && (
+                      <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">💛 What the family shared</p>
+                        {intakeByPlayer[p.id].about && <p className="text-slate-700"><b>As a kid:</b> {intakeByPlayer[p.id].about}</p>}
+                        {intakeByPlayer[p.id].asPlayer && <p className="text-slate-700"><b>As a player:</b> {intakeByPlayer[p.id].asPlayer}</p>}
+                        {intakeByPlayer[p.id].helpMe && <p className="text-slate-700"><b>Coaching tips:</b> {intakeByPlayer[p.id].helpMe}</p>}
+                      </div>
+                    )}
                     <CoachPlayerTools playerId={p.id} parentName={primaryGuardian(p)?.name ?? ""} initialSkills={skillsByPlayer[p.id] ?? []} />
                   </div>
                 </details>

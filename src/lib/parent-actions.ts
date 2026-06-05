@@ -290,3 +290,13 @@ export async function sendCoachNote(formData: FormData) {
   });
   revalidatePath("/parent/coach");
 }
+
+export async function updateIntake(formData: FormData) {
+  const session = await getParentSession();
+  if (!session) return;
+  const { writeIntake } = await import("@/lib/parentintake");
+  const v = (k: string) => { const x = String(formData.get(k) ?? "").trim(); return x ? x.slice(0, 2000) : undefined; };
+  await writeIntake(session.player.id, { about: v("about"), asPlayer: v("asPlayer"), helpMe: v("helpMe") });
+  revalidatePath("/parent/profile");
+  revalidatePath("/parent");
+}

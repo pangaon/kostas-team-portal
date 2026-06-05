@@ -1,9 +1,10 @@
 import { getParentSession } from "@/lib/parent";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { updateOwnProfile, addBlock, removeBlock } from "@/lib/parent-actions";
+import { updateOwnProfile, addBlock, removeBlock, updateIntake } from "@/lib/parent-actions";
 import { fmtDate } from "@/lib/format";
 import { Card, PageTitle, SectionTitle, Button, EmptyState } from "@/components/ui";
 import type { Guardian, AvailabilityBlock } from "@/lib/types";
+import { readIntake } from "@/lib/parentintake";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function ProfilePage() {
   const g = (guardian as Guardian) ?? null;
   const { data: realPlayer } = await admin.from("players").select("strong_foot, preferred_position").eq("id", player.id).maybeSingle();
   const rp = (realPlayer as { strong_foot: string | null; preferred_position: string | null } | null) ?? null;
+  const intake = await readIntake(player.id);
 
   const { data: blockData } = await admin
     .from("availability_blocks")
@@ -34,6 +36,28 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-5">
       <PageTitle title={`${player.first_name}'s profile`} subtitle={team.name} />
+
+      <form action={updateIntake}>
+        <Card className="space-y-3 border-brand-200 bg-brand-50/40">
+          <div>
+            <SectionTitle>💛 Help your coach get to know {player.first_name}</SectionTitle>
+            <p className="text-sm text-slate-600">Your coach is meeting the kids fresh — you know {player.first_name} best. A few lines really help (all optional, only your coach sees this).</p>
+          </div>
+          <div>
+            <label className="label" htmlFor="about">As a kid — personality, what makes them tick</label>
+            <textarea id="about" name="about" rows={2} className="input" defaultValue={intake.about ?? ""} placeholder="e.g. Shy at first but loves encouragement; super competitive; best friends with Caleb." />
+          </div>
+          <div>
+            <label className="label" htmlFor="asPlayer">As a player — strengths, what they love, goals</label>
+            <textarea id="asPlayer" name="asPlayer" rows={2} className="input" defaultValue={intake.asPlayer ?? ""} placeholder="e.g. Quick and loves attacking; wants to try goalie; gets down on himself after mistakes." />
+          </div>
+          <div>
+            <label className="label" htmlFor="helpMe">Anything that helps you coach them well</label>
+            <textarea id="helpMe" name="helpMe" rows={2} className="input" defaultValue={intake.helpMe ?? ""} placeholder="e.g. Responds great to specific praise; needs a sub before he overheats; asthma — carries a puffer." />
+          </div>
+          <Button type="submit">Save for coach</Button>
+        </Card>
+      </form>
 
       <form action={updateOwnProfile} className="space-y-4">
         <Card className="space-y-3">
