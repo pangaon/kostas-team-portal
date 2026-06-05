@@ -5,18 +5,33 @@ import { fmtDate } from "@/lib/format";
 import { TacticsBoard } from "./TacticsBoard";
 import { withAvatars } from "@/lib/avatars";
 import { Onboarding } from "@/components/Onboarding";
+import { sportFromString } from "@/lib/sports";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function TacticsPage({ searchParams }: { searchParams: { event?: string } }) {
   const { team } = await requireCoachTeam();
+  const sport = sportFromString(team.sport);
+  const pitchReady = sport.id === "soccer8";
   const events = await getEvents(team.id);
   const games = events.filter((e) => e.type === "game" || e.type === "tournament");
   const event = searchParams.event ? events.find((e) => e.id === searchParams.event) : (nextEvent(games) ?? games[games.length - 1]);
 
   if (!event) {
     return (<div className="space-y-4"><PageTitle title="Tactics" subtitle="Build your lineup on the pitch" /><EmptyState title="No game to plan yet" hint="Add a game on the Schedule first." /></div>);
+  }
+  if (!pitchReady) {
+    return (
+      <div className="space-y-4">
+        <PageTitle title="Tactics" subtitle={`${sport.emoji} ${sport.label}`} />
+        <Card className="space-y-2">
+          <p className="font-semibold text-ink">{sport.emoji} The visual board for {sport.label} is on the way.</p>
+          <p className="text-sm text-slate-600">For now, set your starting lineup right in the live game: open the next {sport.noun}, tap <b>Auto-pick {sport.onField}</b> or tap players onto the floor, set positions ({sport.positions.join(", ")}), and sub live. Everything tracks playing time and syncs across devices.</p>
+          <Link href={`/event/${event.id}/live`} className="btn-primary inline-flex w-fit">▶ Open live {sport.noun}</Link>
+        </Card>
+      </div>
+    );
   }
   const players = await withAvatars((await getPlayers(team.id)).filter((p) => p.status === "approved"));
   const [plans, att] = await Promise.all([getLineupPlans(event.id), getAttendance(event.id)]);
