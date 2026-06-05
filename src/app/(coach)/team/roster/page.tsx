@@ -3,7 +3,9 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getPlayersWithGuardians } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import type { PlayerWithGuardians, Guardian } from "@/lib/types";
-import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer } from "./actions";
+import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers } from "./actions";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { withAvatars } from "@/lib/avatars";
 
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
@@ -114,6 +116,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
       return a.first_name.localeCompare(b.first_name);
     });
 
+  const approvedA = await withAvatars(approved);
   const nameKey = (p: { first_name: string; last_name: string }) => `${p.first_name} ${p.last_name}`.toLowerCase().trim();
   const nameCounts: Record<string, number> = {};
   approved.forEach((p) => { nameCounts[nameKey(p)] = (nameCounts[nameKey(p)] ?? 0) + 1; });
@@ -134,6 +137,17 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
 
       {editPlayer && <PlayerForm player={editPlayer} />}
       {showAdd && !editPlayer && <PlayerForm />}
+
+      {!editPlayer && (
+        <details className="card !p-0 overflow-hidden">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">⚡ Bulk add players (paste a list)</summary>
+          <form action={bulkAddPlayers} className="space-y-2 border-t border-slate-100 p-4">
+            <p className="text-xs text-slate-500">One name per line. Add a number like <code>Joey 7</code> if you want. Last name optional.</p>
+            <textarea name="names" rows={5} className="input" placeholder={"William Bradley 10\nKaterina 11\nBenjamin"} />
+            <button className="btn-primary">Add players</button>
+          </form>
+        </details>
+      )}
 
       {pending.length > 0 && (
         <div>
@@ -175,14 +189,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
           <EmptyState title="No players yet" hint="Add a player or share your invite link." />
         ) : (
           <div className="space-y-3">
-            {approved.map((p) => {
-              const initials = `${p.first_name[0] ?? ""}${p.last_name[0] ?? ""}`.toUpperCase();
+            {approvedA.map((p) => {
               const isDup = dupNames.has(nameKey(p));
               const strengthLabel = p.strength ? `★${p.strength}` : null;
               return (
               <Card key={p.id} className="!p-0 overflow-hidden">
                 <div className="flex items-center gap-3 p-3">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-sm font-bold text-brand-700">{p.jersey_number || initials}</div>
+                  <AvatarUpload id={p.id} name={`${p.first_name} ${p.last_name}`} photoUrl={p.avatar_url} action={uploadAvatar} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.first_name} {p.last_name}</p>
                     <p className="truncate text-xs text-slate-500">{[p.preferred_position, p.strong_foot ? `${p.strong_foot} foot` : null, strengthLabel].filter(Boolean).join(" · ") || "—"}</p>

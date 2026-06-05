@@ -3,6 +3,7 @@ import { getPlayers, getEvents, getLineupPlans, getAttendance, nextEvent } from 
 import { PageTitle, EmptyState, Card } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import { TacticsBoard } from "./TacticsBoard";
+import { withAvatars } from "@/lib/avatars";
 import { Onboarding } from "@/components/Onboarding";
 import Link from "next/link";
 
@@ -17,7 +18,7 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
   if (!event) {
     return (<div className="space-y-4"><PageTitle title="Tactics" subtitle="Build your lineup on the pitch" /><EmptyState title="No game to plan yet" hint="Add a game on the Schedule first." /></div>);
   }
-  const players = (await getPlayers(team.id)).filter((p) => p.status === "approved");
+  const players = await withAvatars((await getPlayers(team.id)).filter((p) => p.status === "approved"));
   const [plans, att] = await Promise.all([getLineupPlans(event.id), getAttendance(event.id)]);
   const attendingIds = att.filter((a) => a.status === "attending").map((a) => a.player_id);
 
@@ -39,7 +40,7 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
         eventId={event.id}
         attendingIds={attendingIds}
         initialPlans={plans}
-        players={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name, jersey_number: p.jersey_number, strength: p.strength, preferred_position: p.preferred_position, coach_notes: p.coach_notes }))}
+        players={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name, jersey_number: p.jersey_number, strength: p.strength, preferred_position: p.preferred_position, coach_notes: p.coach_notes, avatar_url: p.avatar_url }))}
       />
     </div>
   );

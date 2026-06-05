@@ -107,3 +107,37 @@ export async function upsertPlayer(formData: FormData) {
   revalidatePath("/team/roster");
   redirect("/team/roster?saved=1");
 }
+
+export async function uploadAvatar(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  const id = s(formData, "id");
+  const file = formData.get("photo") as File | null;
+  if (!id || !file || file.size === 0) redirect("/team/roster");
+  if (file.size > 6 * 1024 * 1024) redirect("/team/roster?error=" + encodeURIComponent("Photo too large (max 6MB)"));
+  const { data: pl } = await db.from("players").select("id, team_id").eq("id", id).maybeSingle();
+  if (!pl || pl.team_id !== team.id) redirect("/team/roster");
+  const { ensureAvatarBucket } = await import("@/lib/avatars");
+  const admin = await ensureAvatarBucket();
+  const buf = Buffer.from(await file.arrayBuffer());
+  await admin.storage.from("avatars").upload(id, buf, { upsert: true, contentType: file.type || "image/jpeg" });
+  revalidatePath("/team/roster");
+  redirect("/team/roster?saved=" + encodeURIComponent("Photo updated"));
+}
+
+export async function bulkAddPlayers(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  const raw = s(formData, "names");
+  const lines = raw.split(/[\n,]/).map((x) => x.trim()).filter(Boolean).slice(0, 40);
+  const rows = lines.map((line) => {
+    const m = line.match(/^(.*?)(?:\s+#?(\d{1,2}))?$/);
+    const namePart = (m?.[1] || line).trim();
+    const jersey = m?.[2] || null;
+    const sp = namePart.split(/\s+/);
+    return { team_id: team.id, first_name: sp[0], last_name: sp.slice(1).join(" "), jersey_number: jersey, status: "approved" as const };
+  }).filter((r) => r.first_name);
+  if (rows.length) await db.from("players").insert(rows);
+  revalidatePath("/team/roster");
+  redirect("/team/roster?saved=" + encodeURIComponent(`Added ${rows.length} player${rows.length === 1 ? "" : "s"}`));
+}
