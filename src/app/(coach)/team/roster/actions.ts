@@ -20,7 +20,7 @@ async function setStatus(formData: FormData, status: "approved" | "rejected") {
   if (!player || player.team_id !== team.id) return;
   await db.from("players").update({ status }).eq("id", id).eq("team_id", team.id);
   revalidatePath("/team/roster");
-  redirect("/team/roster");
+  redirect("/team/roster?saved=1");
 }
 
 export async function approvePlayer(formData: FormData) {
@@ -38,7 +38,7 @@ export async function deletePlayer(formData: FormData) {
   if (!id) return;
   await db.from("players").delete().eq("id", id).eq("team_id", team.id);
   revalidatePath("/team/roster");
-  redirect("/team/roster");
+  redirect("/team/roster?saved=1");
 }
 
 export async function upsertPlayer(formData: FormData) {
@@ -49,7 +49,7 @@ export async function upsertPlayer(formData: FormData) {
   const first_name = s(formData, "first_name");
   const last_name = s(formData, "last_name");
   if (!first_name || !last_name) {
-    redirect("/team/roster");
+    redirect("/team/roster?saved=1");
   }
 
   const playerFields = {
@@ -58,6 +58,7 @@ export async function upsertPlayer(formData: FormData) {
     jersey_number: nullable(s(formData, "jersey_number")),
     preferred_position: nullable(s(formData, "preferred_position")),
     strong_foot: nullable(s(formData, "strong_foot")),
+    strength: s(formData, "strength") ? parseInt(s(formData, "strength"), 10) : null,
     allergies: nullable(s(formData, "allergies")),
     medical_notes: nullable(s(formData, "medical_notes")),
     emergency_contact_name: nullable(s(formData, "emergency_contact_name")),
@@ -73,7 +74,7 @@ export async function upsertPlayer(formData: FormData) {
   if (id) {
     const { data: existing } = await db.from("players").select("id, team_id").eq("id", id).maybeSingle();
     if (!existing || existing.team_id !== team.id) {
-      redirect("/team/roster");
+      redirect("/team/roster?saved=1");
     }
     await db.from("players").update(playerFields).eq("id", id).eq("team_id", team.id);
 
@@ -104,5 +105,5 @@ export async function upsertPlayer(formData: FormData) {
   }
 
   revalidatePath("/team/roster");
-  redirect("/team/roster");
+  redirect("/team/roster?saved=1");
 }

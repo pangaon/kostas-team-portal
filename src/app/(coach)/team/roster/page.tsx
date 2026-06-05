@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireCoachTeam } from "@/lib/auth";
 import { getPlayersWithGuardians } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
@@ -37,6 +38,17 @@ function PlayerForm({ player }: { player?: PlayerWithGuardians }) {
             <option value="left">Left</option>
             <option value="right">Right</option>
             <option value="both">Both</option>
+          </select>
+        </Field>
+
+        <Field label="Strength (powers the tactics board colors)" name="strength">
+          <select id="strength" name="strength" className="input" defaultValue={player?.strength ? String(player.strength) : ""}>
+            <option value="">Unrated</option>
+            <option value="5">5 · star</option>
+            <option value="4">4 · strong</option>
+            <option value="3">3 · solid</option>
+            <option value="2">2 · developing</option>
+            <option value="1">1 · new</option>
           </select>
         </Field>
         <Field label="Allergies" name="allergies">
@@ -102,6 +114,11 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
       return a.first_name.localeCompare(b.first_name);
     });
 
+  const nameKey = (p: { first_name: string; last_name: string }) => `${p.first_name} ${p.last_name}`.toLowerCase().trim();
+  const nameCounts: Record<string, number> = {};
+  approved.forEach((p) => { nameCounts[nameKey(p)] = (nameCounts[nameKey(p)] ?? 0) + 1; });
+  const dupNames = new Set(Object.keys(nameCounts).filter((k) => nameCounts[k] > 1));
+
   const editPlayer = searchParams.edit
     ? players.find((p) => p.id === searchParams.edit)
     : undefined;
@@ -158,70 +175,54 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
           <EmptyState title="No players yet" hint="Add a player or share your invite link." />
         ) : (
           <div className="space-y-3">
-            {approved.map((p) => (
-              <Card key={p.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-lg font-semibold">
-                      {p.jersey_number ? <span className="text-brand-600">#{p.jersey_number} </span> : null}
-                      {p.first_name} {p.last_name}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {[p.preferred_position, p.strong_foot ? `${p.strong_foot} foot` : null]
-                        .filter(Boolean).join(" · ")}
-                    </p>
+            {approved.map((p) => {
+              const initials = `${p.first_name[0] ?? ""}${p.last_name[0] ?? ""}`.toUpperCase();
+              const isDup = dupNames.has(nameKey(p));
+              const strengthLabel = p.strength ? `★${p.strength}` : null;
+              return (
+              <Card key={p.id} className="!p-0 overflow-hidden">
+                <div className="flex items-center gap-3 p-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-sm font-bold text-brand-700">{p.jersey_number || initials}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{p.first_name} {p.last_name}</p>
+                    <p className="truncate text-xs text-slate-500">{[p.preferred_position, p.strong_foot ? `${p.strong_foot} foot` : null, strengthLabel].filter(Boolean).join(" · ") || "—"}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    {p.claimed ? <Badge color="green">✓ Joined</Badge> : <Badge color="slate">Not joined</Badge>}
+                    {p.claimed ? <Badge color="green">Joined</Badge> : <Badge color="slate">Not joined</Badge>}
                     {p.allergies && <Badge color="red">Allergy</Badge>}
                   </div>
                 </div>
-
-                <div className="mt-3 space-y-1 text-sm text-slate-700">
-                  {p.guardians.length > 0 ? (
-                    p.guardians.map((g) => (
-                      <div key={g.id}>
-                        <span className="font-medium">{g.name}</span>
-                        {g.relationship ? <span className="text-slate-500"> ({g.relationship})</span> : null}
-                        {g.is_primary ? <span className="text-slate-400"> · primary</span> : null}
-                        <div className="text-slate-500">
-                          {[g.phone, g.email].filter(Boolean).join(" · ") || "no contact"}
-                        </div>
+                {isDup && (
+                  <div className="mx-3 mb-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">⚠ Possible duplicate name — keep the one with real parent info, delete the other.</div>
+                )}
+                <details className="border-t border-slate-100">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600">Contacts &amp; details</summary>
+                  <div className="space-y-2 px-3 pb-3 text-sm">
+                    {p.guardians.length > 0 ? p.guardians.map((gg) => (
+                      <div key={gg.id}>
+                        <span className="font-medium">{gg.name}</span>{gg.is_primary ? <span className="text-slate-400"> · primary</span> : null}
+                        <div className="text-slate-500">{[gg.phone, gg.email].filter(Boolean).join(" · ") || "no contact"}</div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-400">No guardian on file</p>
-                  )}
-                </div>
-
-                {(p.allergies || p.medical_notes) && (
-                  <div className="mt-3 rounded-lg bg-rose-50 p-2 text-sm text-rose-800">
-                    {p.allergies && <p>Allergies: {p.allergies}</p>}
-                    {p.medical_notes && <p>Medical: {p.medical_notes}</p>}
+                    )) : <p className="text-slate-400">No guardian on file</p>}
+                    {(p.allergies || p.medical_notes) && (
+                      <div className="rounded-lg bg-rose-50 p-2 text-rose-800">
+                        {p.allergies && <p>Allergies: {p.allergies}</p>}
+                        {p.medical_notes && <p>Medical: {p.medical_notes}</p>}
+                      </div>
+                    )}
+                    {(p.emergency_contact_name || p.emergency_contact_phone) && <p className="text-slate-600">Emergency: {[p.emergency_contact_name, p.emergency_contact_phone].filter(Boolean).join(" · ")}</p>}
+                    {p.coach_notes && <p className="rounded-lg bg-slate-50 p-2 text-slate-600">📝 {p.coach_notes}</p>}
                   </div>
-                )}
-
-                {(p.emergency_contact_name || p.emergency_contact_phone) && (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Emergency: {[p.emergency_contact_name, p.emergency_contact_phone].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-
-                {p.coach_notes && (
-                  <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-600">
-                    Coach notes: {p.coach_notes}
-                  </p>
-                )}
-
-                <div className="mt-3 flex gap-2">
-                  <Button href={`/team/roster?edit=${p.id}`} variant="secondary">Edit</Button>
-                  <form action={deletePlayer}>
+                </details>
+                <div className="flex border-t border-slate-100 text-sm font-medium">
+                  <Link href={`/team/roster?edit=${p.id}`} className="flex-1 py-2.5 text-center text-brand-700">Edit</Link>
+                  <form action={deletePlayer} className="flex-1 border-l border-slate-100">
                     <input type="hidden" name="id" value={p.id} />
-                    <Button type="submit" variant="danger">Delete</Button>
+                    <button className="w-full py-2.5 text-center text-rose-600">Delete</button>
                   </form>
                 </div>
               </Card>
-            ))}
+            );})}
           </div>
         )}
       </div>

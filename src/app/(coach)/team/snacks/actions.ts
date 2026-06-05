@@ -15,7 +15,7 @@ export async function assignSnack(formData: FormData) {
   const player_id = s(formData, "player_id");
   const snack_notes = s(formData, "snack_notes");
   if (!event_id || !player_id) {
-    redirect("/team/snacks");
+    redirect("/team/snacks?saved=1");
   }
   await db
     .from("snack_signups")
@@ -29,7 +29,7 @@ export async function assignSnack(formData: FormData) {
       { onConflict: "event_id" }
     );
   revalidatePath("/team/snacks");
-  redirect("/team/snacks");
+  redirect("/team/snacks?saved=1");
 }
 
 export async function clearSnack(formData: FormData) {
@@ -39,5 +39,5 @@ export async function clearSnack(formData: FormData) {
   if (!event_id) return;
   await db.from("snack_signups").delete().eq("event_id", event_id).eq("team_id", team.id);
   revalidatePath("/team/snacks");
-  redirect("/team/snacks");
+  redirect("/team/snacks?saved=1");
 }

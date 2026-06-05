@@ -29,7 +29,7 @@ export async function upsertEvent(formData: FormData) {
   const type: EventType = (EVENT_TYPES as string[]).includes(rawType) ? (rawType as EventType) : "other";
   const startIso = toIso(s(formData, "start"));
   if (!startIso) {
-    redirect("/team/schedule");
+    redirect("/team/schedule?saved=1");
   }
 
   const fields = {
@@ -51,7 +51,7 @@ export async function upsertEvent(formData: FormData) {
   }
 
   revalidatePath("/team/schedule");
-  redirect("/team/schedule");
+  redirect("/team/schedule?saved=1");
 }
 
 export async function deleteEvent(formData: FormData) {
@@ -61,7 +61,7 @@ export async function deleteEvent(formData: FormData) {
   if (!id) return;
   await db.from("events").delete().eq("id", id).eq("team_id", team.id);
   revalidatePath("/team/schedule");
-  redirect("/team/schedule");
+  redirect("/team/schedule?saved=1");
 }
 
 export async function setEventStatus(formData: FormData) {
@@ -74,5 +74,5 @@ export async function setEventStatus(formData: FormData) {
   if (!id) return;
   await db.from("events").update({ status }).eq("id", id).eq("team_id", team.id);
   revalidatePath("/team/schedule");
-  redirect("/team/schedule");
+  redirect("/team/schedule?saved=1");
 }

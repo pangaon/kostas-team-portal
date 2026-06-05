@@ -11,7 +11,7 @@ export type Player = {
   id: string; team_id: string; first_name: string; last_name: string;
   jersey_number: string | null; allergies: string | null; medical_notes: string | null;
   emergency_contact_name: string | null; emergency_contact_phone: string | null;
-  preferred_position: string | null; strong_foot: string | null; coach_notes: string | null;
+  preferred_position: string | null; strong_foot: string | null; coach_notes: string | null; strength: number | null;
   status: PlayerStatus; claimed: boolean; access_token: string; created_at: string;
 };
 export type Guardian = {
@@ -112,4 +112,17 @@ export type SubPlan = {
 export type TeamMember = {
   id: string; team_id: string; user_id: string | null; email: string | null;
   role: string; status: string; created_at: string;
+};
+
+export type LineupSlot = { pos: string; x: number; y: number; player_id: string | null };
+export type LineupPlan = {
+  id: string; team_id: string; event_id: string | null; name: string;
+  formation: string; slots: LineupSlot[]; created_at: string;
+};
+export const FORMATIONS_8: Record<string, { pos: string; x: number; y: number }[]> = {
+  "3-3-1": [{pos:"GK",x:50,y:92},{pos:"DEF",x:22,y:72},{pos:"DEF",x:50,y:75},{pos:"DEF",x:78,y:72},{pos:"MID",x:22,y:46},{pos:"MID",x:50,y:48},{pos:"MID",x:78,y:46},{pos:"FWD",x:50,y:18}],
+  "2-3-2": [{pos:"GK",x:50,y:92},{pos:"DEF",x:34,y:74},{pos:"DEF",x:66,y:74},{pos:"MID",x:20,y:48},{pos:"MID",x:50,y:50},{pos:"MID",x:80,y:48},{pos:"FWD",x:36,y:20},{pos:"FWD",x:64,y:20}],
+  "2-4-1": [{pos:"GK",x:50,y:92},{pos:"DEF",x:34,y:74},{pos:"DEF",x:66,y:74},{pos:"MID",x:18,y:48},{pos:"MID",x:40,y:50},{pos:"MID",x:60,y:50},{pos:"MID",x:82,y:48},{pos:"FWD",x:50,y:18}],
+  "3-2-2": [{pos:"GK",x:50,y:92},{pos:"DEF",x:22,y:74},{pos:"DEF",x:50,y:76},{pos:"DEF",x:78,y:74},{pos:"MID",x:36,y:50},{pos:"MID",x:64,y:50},{pos:"FWD",x:36,y:20},{pos:"FWD",x:64,y:20}],
+  "3-1-3": [{pos:"GK",x:50,y:92},{pos:"DEF",x:22,y:74},{pos:"DEF",x:50,y:76},{pos:"DEF",x:78,y:74},{pos:"MID",x:50,y:52},{pos:"FWD",x:22,y:22},{pos:"FWD",x:50,y:18},{pos:"FWD",x:78,y:22}],
 };

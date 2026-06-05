@@ -18,7 +18,7 @@ export async function createAnnouncement(formData: FormData) {
   const eventRaw = s(formData, "event_id");
   const event_id = eventRaw === "" ? null : eventRaw;
   if (!title || !body) {
-    redirect("/team/announcements");
+    redirect("/team/announcements?saved=1");
   }
 
   await db.from("announcements").insert({
@@ -34,7 +34,7 @@ export async function createAnnouncement(formData: FormData) {
   });
 
   revalidatePath("/team/announcements");
-  redirect("/team/announcements");
+  redirect("/team/announcements?saved=1");
 }
 
 export async function deleteAnnouncement(formData: FormData) {
@@ -48,5 +48,5 @@ export async function deleteAnnouncement(formData: FormData) {
     await db.from("notifications").delete().eq("team_id", team.id).eq("kind", "announcement").eq("title", (ann as { title: string }).title);
   }
   revalidatePath("/team/announcements");
-  redirect("/team/announcements");
+  redirect("/team/announcements?saved=1");
 }

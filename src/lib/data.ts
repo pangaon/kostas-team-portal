@@ -138,3 +138,9 @@ export async function getStaff(teamId: string) {
     .eq("team_id", teamId).neq("status", "removed").order("created_at");
   return (data as import("@/lib/types").TeamMember[]) ?? [];
 }
+
+export async function getLineupPlans(eventId: string) {
+  const a = createAdminClient();
+  const { data } = await a.from("lineup_plans").select("*").eq("event_id", eventId).order("created_at");
+  return (data as import("@/lib/types").LineupPlan[]) ?? [];
+}
