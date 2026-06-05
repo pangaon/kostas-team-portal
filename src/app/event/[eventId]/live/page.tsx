@@ -36,7 +36,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
       players={approved.map((p) => ({
         id: p.id, first_name: p.first_name, last_name: p.last_name, jersey_number: p.jersey_number,
         allergies: p.allergies, emergency_contact_name: p.emergency_contact_name, emergency_contact_phone: p.emergency_contact_phone,
-        guardian_phone: p.guardians?.[0]?.phone ?? null, avatar_url: p.avatar_url,
+        guardian_phone: p.guardians?.[0]?.phone ?? null, avatar_url: p.avatar_url, strength: p.strength,
       }))}
       initField={initField}
       initGoals={goals.map((g) => ({ id: g.id, player_id: g.player_id, saved: true }))}

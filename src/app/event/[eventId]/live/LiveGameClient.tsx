@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Undo2, X, Timer } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 
-type P = { id: string; first_name: string; last_name: string; jersey_number: string | null; allergies: string | null; emergency_contact_name: string | null; emergency_contact_phone: string | null; guardian_phone: string | null; avatar_url?: string | null };
+type P = { id: string; first_name: string; last_name: string; jersey_number: string | null; allergies: string | null; emergency_contact_name: string | null; emergency_contact_phone: string | null; guardian_phone: string | null; avatar_url?: string | null; strength?: number | null };
 type FieldState = Record<string, { status: "starter" | "bench" | "out"; position: string | null }>;
 type Goal = { id: string; player_id: string | null; saved: boolean; minute?: number | null };
 type Sub = { id: string; player_in: string; player_out: string; saved: boolean };
@@ -142,6 +142,15 @@ export function LiveGameClient(props: {
     for (const p of players) post("field", { player_id: p.id, status: next[p.id].status, position: next[p.id].position });
   };
 
+  const autoPickLive = () => {
+    const POS = ["GK", "DEF", "DEF", "DEF", "MID", "MID", "MID", "FWD"];
+    const pool = [...players].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0)).slice(0, 8);
+    const next: FieldState = {};
+    for (const p of players) next[p.id] = { status: "bench", position: field[p.id]?.position ?? null };
+    pool.forEach((p, i) => { next[p.id] = { status: "starter", position: POS[i] }; });
+    setFieldTracked(next);
+    for (const p of players) post("field", { player_id: p.id, status: next[p.id].status, position: next[p.id].position });
+  };
   const addNote = async () => { const t = noteText.trim(); if (!t) return; const stamped = secInHalf > 0 ? `H${half} ${fmtMin(secInHalf)} ${t}` : t; setNoteText(""); const res = await post("note", { note: stamped }); setNotes((n) => [...n, res?.line ?? stamped]); };
   const planSub = async () => {
     if (!outSel || !inSel || outSel === inSel) return;
@@ -195,8 +204,23 @@ export function LiveGameClient(props: {
         </div>
       </div>
 
-      {/* Quick lines */}
-      {plans.length > 0 && (
+      {/* Lineup setup when nobody is on yet */}
+      {onField.length === 0 && (
+        <div className="mb-4 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+          <p className="font-bold text-ink">⚽ Set your starting lineup</p>
+          <p className="mt-0.5 text-sm text-slate-600">Load a line you built in Tactics, auto-pick your strongest 8, or tap players from the bench.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {plans.map((pl) => (
+              <button key={pl.id} onClick={() => applyLine(pl)} className="rounded-full border border-brand-300 bg-white px-3 py-2 text-sm font-semibold text-brand-700 active:scale-95">▶ {pl.name}</button>
+            ))}
+            <button onClick={autoPickLive} className="btn-primary">✨ Auto-pick 8</button>
+          </div>
+          {plans.length === 0 && <p className="mt-2 text-xs text-slate-400">Tip: build &amp; name lineups in Tactics (e.g. “Aces”, “Subs”) to load them here in one tap.</p>}
+        </div>
+      )}
+
+      {/* Quick lines (swap) */}
+      {plans.length > 0 && onField.length > 0 && (
         <div className="mb-4">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">⚡ Load a line (one tap)</p>
           <div className="flex flex-wrap gap-2">
@@ -236,14 +260,18 @@ export function LiveGameClient(props: {
 
       {/* Goal logging */}
       <Section title="⚽ Goal for us — tap the scorer" />
-      <div className="flex flex-wrap gap-2">
-        {(onField.length ? onField : players).map((p) => (
-          <button key={p.id} onClick={() => logGoal(p.id)} className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 py-1 pl-1 pr-3 text-sm font-semibold text-emerald-800 active:scale-95">
-            <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={24} />{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}
-          </button>
-        ))}
-        <button onClick={() => logGoal(null)} className="rounded-full border border-slate-300 px-3 py-2 text-sm active:scale-95">Own/unknown</button>
-      </div>
+      {onField.length === 0 ? (
+        <p className="text-sm text-slate-400">Set your lineup above first — then your on-field players show here to tap when they score.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {onField.map((p) => (
+            <button key={p.id} onClick={() => logGoal(p.id)} className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 py-1 pl-1 pr-3 text-sm font-semibold text-emerald-800 active:scale-95">
+              <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={24} />{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}
+            </button>
+          ))}
+          <button onClick={() => logGoal(null)} className="rounded-full border border-slate-300 px-3 py-2 text-sm active:scale-95">Own/unknown</button>
+        </div>
+      )}
       {goals.length > 0 && (
         <div className="mt-3 space-y-1">
           {goals.map((g) => (
