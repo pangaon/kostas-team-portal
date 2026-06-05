@@ -156,11 +156,22 @@ export function LiveGameClient(props: {
   };
   const undoGoal = (g: Goal) => { setGoals((gs) => gs.filter((x) => x.id !== g.id)); setUs((s) => Math.max(0, s - 1)); if (g.saved) post("undoGoal", { id: g.id }); };
 
+  const GRACE = 20; // seconds — taking a kid off this fast = misclick, don't bank the time
   const toggleField = (id: string) => {
     const cur = field[id]?.status === "starter";
+    if (cur) {
+      const since = onSinceRef.current[id];
+      if (since && (Date.now() - since) / 1000 < GRACE) onSinceRef.current[id] = null; // discard misclick time
+    }
     const next: FieldState = { ...field, [id]: { status: cur ? "bench" : "starter", position: field[id]?.position ?? null } };
     setFieldTracked(next);
     post("field", { player_id: id, status: next[id].status, position: next[id].position });
+  };
+  const resetPlayerMins = (id: string) => {
+    minsRef.current[id] = 0;
+    onSinceRef.current[id] = field[id]?.status === "starter" && running ? Date.now() : null;
+    setTick((n) => n + 1);
+    setTimeout(() => { persist(); persistServer(); }, 0);
   };
   const setPos = (id: string, position: string) => { const next = { ...field, [id]: { status: "starter" as const, position } }; setField(next); post("field", { player_id: id, status: "starter", position }); };
 
@@ -281,6 +292,7 @@ export function LiveGameClient(props: {
                     <span className="absolute inset-y-0 left-0 rounded-full bg-brand-500" style={{ width: `${Math.min(100, (mins / maxMins) * 100)}%` }} />
                   </span>
                   <span className="w-12 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-600">{fmtMin(mins)}</span>
+                  <button onClick={() => resetPlayerMins(p.id)} aria-label="Reset minutes" title="Reset this player's minutes" className="shrink-0 text-slate-300 hover:text-rose-500">↺</button>
                 </div>
               );
             })}
