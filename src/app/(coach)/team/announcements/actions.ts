@@ -50,3 +50,12 @@ export async function deleteAnnouncement(formData: FormData) {
   revalidatePath("/team/announcements");
   redirect("/team/announcements?saved=1");
 }
+
+export async function clearAllAnnouncements() {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  await db.from("announcements").delete().eq("team_id", team.id);
+  await db.from("notifications").delete().eq("team_id", team.id).eq("kind", "announcement");
+  revalidatePath("/team/announcements");
+  redirect("/team/announcements?saved=Cleared");
+}

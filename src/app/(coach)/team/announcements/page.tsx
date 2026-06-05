@@ -3,7 +3,7 @@ import { getAnnouncements, getEvents } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Button, EmptyState, Field } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
-import { createAnnouncement, deleteAnnouncement } from "./actions";
+import { createAnnouncement, deleteAnnouncement, clearAllAnnouncements } from "./actions";
 
 export default async function AnnouncementsPage() {
   const { team } = await requireCoachTeam();
@@ -45,6 +45,9 @@ export default async function AnnouncementsPage() {
 
       <div>
         <SectionTitle>Past announcements</SectionTitle>
+          {anns.length > 0 && (
+            <form action={clearAllAnnouncements}><button className="text-xs font-semibold text-rose-500">Clear all</button></form>
+          )}
         {anns.length === 0 ? (
           <EmptyState title="No announcements yet" />
         ) : (
