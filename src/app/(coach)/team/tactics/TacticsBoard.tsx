@@ -248,7 +248,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
                   {selP.preferred_position && <p className="text-xs text-slate-500">Best: {selP.preferred_position}</p>}
                 </div>
               </div>
-              <button onClick={() => setSel(null)} className="text-slate-400"><X size={16} /></button>
+              <button onClick={() => setSel(null)} aria-label="Close player panel" className="text-slate-400"><X size={16} /></button>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500">Strength</span>

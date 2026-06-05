@@ -7,6 +7,7 @@ import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, 
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 import { CoachPlayerTools } from "@/components/CoachPlayerTools";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { readProfiles } from "@/lib/playerprofile";
 import { readIntakes } from "@/lib/parentintake";
 
@@ -273,7 +274,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                   <Link href={`/team/roster?edit=${p.id}`} className="flex-1 py-2.5 text-center text-brand-700">Edit</Link>
                   <form action={deletePlayer} className="flex-1 border-l border-slate-100">
                     <input type="hidden" name="id" value={p.id} />
-                    <button className="w-full py-2.5 text-center text-rose-600">Delete</button>
+                    <ConfirmButton message={`Delete ${p.first_name} ${p.last_name}? This removes them and their info for good.`} className="w-full py-2.5 text-center text-rose-600">Delete</ConfirmButton>
                   </form>
                 </div>
               </Card>

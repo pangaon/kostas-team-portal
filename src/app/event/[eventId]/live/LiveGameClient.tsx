@@ -259,11 +259,11 @@ export function LiveGameClient(props: {
             <span className="font-mono text-3xl font-bold tabular-nums">{fmtMin(sport.timed ? Math.min(secInHalf, halfLen * 60) : secInHalf)}</span>
             {sport.timed && <span className="text-[10px] text-slate-500">/ {halfLen}:00</span>}
             <div className="mt-1 flex gap-1">
-              <button onClick={toggleClock} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90">{running ? <Pause size={15} /> : <Play size={15} />}</button>
+              <button onClick={toggleClock} aria-label={running ? "Pause clock" : "Start clock"} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90">{running ? <Pause size={15} /> : <Play size={15} />}</button>
               {(!atLastPeriod && (halfDone || !sport.timed)) ? (
                 <button onClick={advancePeriod} className="rounded-full bg-emerald-500 px-2 text-[11px] font-bold active:scale-90">{ordinal(half + 1)} {sport.periodType} ▶</button>
               ) : (
-                <button onClick={resetClock} className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><RotateCcw size={14} /></button>
+                <button onClick={resetClock} aria-label="Reset clock" className="grid h-8 w-8 place-items-center rounded-full bg-white/15 active:scale-90"><RotateCcw size={14} /></button>
               )}
             </div>
           </div>
@@ -439,8 +439,8 @@ function ScoreCol({ label, value, onMinus, onPlus, accent }: { label: string; va
       <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <p className={`my-1 text-5xl font-extrabold tabular-nums ${accent ? "text-emerald-400" : ""}`}>{value}</p>
       <div className="flex justify-center gap-2">
-        <button onClick={onMinus} className="h-9 w-9 rounded-full border border-slate-600 text-xl leading-none text-slate-200 active:scale-90">−</button>
-        <button onClick={onPlus} className="h-9 w-9 rounded-full bg-emerald-500 text-xl font-bold leading-none text-white active:scale-90">+</button>
+        <button onClick={onMinus} aria-label={`Subtract from ${label}`} className="h-9 w-9 rounded-full border border-slate-600 text-xl leading-none text-slate-200 active:scale-90">−</button>
+        <button onClick={onPlus} aria-label={`Add to ${label}`} className="h-9 w-9 rounded-full bg-emerald-500 text-xl font-bold leading-none text-white active:scale-90">+</button>
       </div>
     </div>
   );

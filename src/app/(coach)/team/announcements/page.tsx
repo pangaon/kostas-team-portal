@@ -4,6 +4,7 @@ import { Card, PageTitle, SectionTitle, Button, EmptyState, Field } from "@/comp
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
 import { createAnnouncement, deleteAnnouncement, clearAllAnnouncements } from "./actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export default async function AnnouncementsPage() {
   const { team } = await requireCoachTeam();
@@ -46,7 +47,7 @@ export default async function AnnouncementsPage() {
       <div>
         <SectionTitle>Past announcements</SectionTitle>
           {anns.length > 0 && (
-            <form action={clearAllAnnouncements}><button className="text-xs font-semibold text-rose-500">Clear all</button></form>
+            <form action={clearAllAnnouncements}><ConfirmButton message="Delete ALL announcements? This clears them for every parent." className="text-xs font-semibold text-rose-500">Clear all</ConfirmButton></form>
           )}
         {anns.length === 0 ? (
           <EmptyState title="No announcements yet" />

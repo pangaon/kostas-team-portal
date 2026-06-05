@@ -3,6 +3,7 @@ import { getNotifications } from "@/lib/data";
 import { PageTitle, Card, EmptyState } from "@/components/ui";
 import { sendTodayReminders } from "@/app/(coach)/dashboard/actions";
 import { deleteNotification, clearNotifications } from "./actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { fmtDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function NotificationsPage() {
         </div>
         <div className="flex gap-2">
           <form action={sendTodayReminders}><button className="btn-primary">📣 Send today&rsquo;s reminders</button></form>
-          {items.length > 0 && <form action={clearNotifications}><button className="btn-ghost text-rose-600">Clear all</button></form>}
+          {items.length > 0 && <form action={clearNotifications}><ConfirmButton message="Clear the entire alert history?" className="btn-ghost text-rose-600">Clear all</ConfirmButton></form>}
         </div>
       </Card>
 

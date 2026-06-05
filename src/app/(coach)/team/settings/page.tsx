@@ -8,6 +8,7 @@ import { SPORT_OPTIONS, sportFromString } from "@/lib/sports";
 import { readTeamRules } from "@/lib/teamrules";
 import { getStaff } from "@/lib/data";
 import { Badge } from "@/components/ui";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export default async function SettingsPage() {
   const { team, userId } = await requireCoachTeam();
@@ -36,7 +37,7 @@ export default async function SettingsPage() {
               <div className="flex items-center gap-2">
                 <Badge color={m.status === "active" ? "green" : "amber"}>{m.status === "active" ? "active" : "invited"}</Badge>
                 {isOwner && m.user_id !== team.created_by && (
-                  <form action={removeCoach}><input type="hidden" name="id" value={m.id} /><button className="text-sm text-rose-500">remove</button></form>
+                  <form action={removeCoach}><input type="hidden" name="id" value={m.id} /><ConfirmButton message="Remove this coach from the team?" className="text-sm text-rose-500">remove</ConfirmButton></form>
                 )}
               </div>
             </li>
