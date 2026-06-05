@@ -23,8 +23,8 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
 
   return (
     <div className="space-y-4">
-      <PageTitle title="Tactics" subtitle="Drag your squad onto the pitch — try formations, save plans, push to the game." />
-      <Onboarding id="tactics_v1" title="🎯 How the pitch works" steps={["Pick a formation up top.","Tap a player chip, then tap a spot on the pitch to place them.","Players are colored by strength rating (set it in Roster).","Save the plan, then tap \u201cUse this lineup in the game\u201d to load it into the live console."]} />
+      <PageTitle title="Tactics" subtitle="Drag players onto the pitch. Undo anytime. Rate strength with the stars." />
+      <Onboarding id="tactics_v1" title="🎯 How the pitch works" steps={["Pick a formation up top.","Drag a player from the squad onto any spot \u2014 or tap a player then tap a spot.","Drag a player off the pitch to bench them; hit Undo to revert.","Tap a player to rate strength (stars). Share exports the lineup as an image."]} />
       <Card className="!p-2">
         <div className="flex gap-2 overflow-x-auto">
           {games.map((g) => (
