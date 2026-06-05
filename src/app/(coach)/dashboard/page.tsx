@@ -115,8 +115,7 @@ export default async function Dashboard() {
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button href={`/event/${next.id}/live`}>▶ Live game</Button>
-              <Button href={`/team/lineup?event=${next.id}`} variant="secondary">Set lineup</Button>
-              <Button href={`/team/checkin?event=${next.id}`} variant="secondary">Game-day check-in</Button>
+              <Button href={`/team/tactics?event=${next.id}`} variant="secondary">🎯 Tactics / lineup</Button>
               <Button href={`/event/${next.id}/sheet`} variant="secondary">Game-day sheet</Button>
             </div>
           </Card>
