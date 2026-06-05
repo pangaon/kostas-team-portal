@@ -3,17 +3,21 @@ import "./globals.css";
 import { AutoUpdate } from "@/components/AutoUpdate";
 
 export const metadata: Metadata = {
-  title: "Kostas Team Portal",
-  description: "One clean place for your team's schedule, attendance, snacks, and announcements.",
+  title: { default: "Kostas Team Portal", template: "%s · Team Portal" },
+  description: "Your team's schedule, lineups, live game console, snacks and chat — all in one place.",
   manifest: "/manifest.webmanifest",
+  applicationName: "Team Portal",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Team Portal" },
+  formatDetection: { telephone: false },
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+  openGraph: { title: "Kostas Team Portal", description: "Schedule, lineups, live game, snacks and chat for your team.", type: "website" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1d4ed8",
+  themeColor: "#2348e0",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

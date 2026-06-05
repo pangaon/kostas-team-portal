@@ -1,14 +1,16 @@
 {
   "name": "Kostas Team Portal",
   "short_name": "Team Portal",
-  "description": "Schedule, attendance, snacks and announcements for the team.",
+  "description": "Your team's schedule, lineups, live game console, snacks and chat — all in one place.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f8fafc",
-  "theme_color": "#1d4ed8",
+  "theme_color": "#2348e0",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

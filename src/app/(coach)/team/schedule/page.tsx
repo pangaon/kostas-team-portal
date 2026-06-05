@@ -7,6 +7,7 @@ import type { TeamEvent } from "@/lib/types";
 import { upsertEvent, deleteEvent, setEventStatus } from "./actions";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { ScheduleTabs } from "@/components/ScheduleTabs";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 function localValue(iso: string | null): string {
   if (!iso) return "";
@@ -124,7 +125,7 @@ function EventCard({ event }: { event: TeamEvent }) {
         )}
         <form action={deleteEvent}>
           <input type="hidden" name="id" value={event.id} />
-          <Button type="submit" variant="danger">Delete</Button>
+          <ConfirmButton message="Delete this event? This can't be undone." className="btn bg-rose-50 text-rose-600 hover:bg-rose-100">Delete</ConfirmButton>
         </form>
       </div>
     </Card>

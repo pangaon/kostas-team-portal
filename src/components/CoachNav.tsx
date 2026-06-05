@@ -99,7 +99,7 @@ export function CoachNav({ teamName }: { teamName: string }) {
               </Link>
             );
           })}
-          <button onClick={() => setOpen((o) => !o)} className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition ${moreActive || open ? "text-brand-700" : "text-slate-500"}`}>
+          <button onClick={() => setOpen((o) => !o)} aria-label="More menu" aria-expanded={open} className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition ${moreActive || open ? "text-brand-700" : "text-slate-500"}`}>
             <span className="text-xl leading-none">⋯</span>More
           </button>
         </div>

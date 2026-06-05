@@ -40,3 +40,10 @@ button, a, input, select, textarea { touch-action: manipulation; }
 }
 a, button, .input, select, textarea { transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease; }
 button:active, a:active { transform: scale(.985); }
+
+/* ---- Accessibility: visible keyboard focus ---- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #2348e0;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
