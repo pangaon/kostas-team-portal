@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireCoachTeam } from "@/lib/auth";
-import { getPlayersWithGuardians } from "@/lib/data";
+import { getPlayersWithGuardians, originFromEnv } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import type { PlayerWithGuardians, Guardian } from "@/lib/types";
 import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending } from "./actions";
@@ -8,6 +8,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 import { CoachPlayerTools } from "@/components/CoachPlayerTools";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { CopyButton } from "@/components/CopyButton";
 import { readProfiles } from "@/lib/playerprofile";
 import { readIntakes } from "@/lib/parentintake";
 
@@ -150,6 +151,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
   const approvedA = await withAvatars(approved);
   const skillsByPlayer = await readProfiles(approvedA.map((p) => p.id));
   const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
+  const origin = originFromEnv();
   const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
     const pc = contactsOf(pend);
@@ -286,6 +288,11 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                 <details className="border-t border-slate-100">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600">🧠 Coach tools — skills &amp; send a tip</summary>
                   <div className="space-y-3 px-3 pb-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🔗 Parent access link</p>
+                      <p className="mb-2 text-xs text-slate-500">Send this to a parent/guardian — tapping it logs them straight into {p.first_name}&rsquo;s parent view on their phone. No password.</p>
+                      <CopyButton text={`${origin}/access/${p.access_token}`} label="Copy parent link" />
+                    </div>
                     {intakeByPlayer[p.id] && (
                       <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm">
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">💛 What the family shared</p>
