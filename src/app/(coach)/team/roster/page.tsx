@@ -152,6 +152,12 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
   const skillsByPlayer = await readProfiles(approvedA.map((p) => p.id));
   const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
   const origin = originFromEnv();
+  const nudgeLink = (phone: string | null | undefined, token: string) => {
+    const d = (phone ?? "").replace(/\D/g, "");
+    const intl = d.length === 10 ? "1" + d : d;
+    const msg = `Hi! Coach here \u2014 here's your link for the ${team.name} team app: ${origin}/access/${token}  Tap it and you're in, no password. Say yes to notifications for game-day reminders \ud83d\udc4d`;
+    return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
+  };
   const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
     const pc = contactsOf(pend);
@@ -260,6 +266,9 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {p.claimed ? <Badge color="green">Joined</Badge> : <Badge color="slate">Not joined</Badge>}
+                    {!p.claimed && primaryGuardian(p)?.phone && (
+                      <a href={nudgeLink(primaryGuardian(p)?.phone, p.access_token)} target="_blank" rel="noopener" className="text-xs font-semibold text-emerald-600">\ud83d\udcf2 Nudge</a>
+                    )}
                     {p.allergies && <Badge color="red">Allergy</Badge>}
                   </div>
                 </div>
