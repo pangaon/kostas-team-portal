@@ -3,7 +3,7 @@ import { getOrgForOwner } from "@/lib/orgs";
 import { leagueStandings, originFromEnv } from "@/lib/data";
 import { PageTitle, Card, SectionTitle, Button, EmptyState } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
-import { createLeague, renameLeague, setLeagueTeams } from "./actions";
+import { createLeague, renameLeague, setLeagueTeams, joinLeagueByCode } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,18 @@ export default async function LeaguePage() {
             <Button type="submit">Create</Button>
           </form>
         </Card>
+      <Card>
+        <SectionTitle>Join another league</SectionTitle>
+        <p className="mb-2 text-sm text-slate-500">Got a league code from another organizer? Add one of your teams to their league.</p>
+        <form action={joinLeagueByCode} className="space-y-2">
+          <input name="code" required className="input" placeholder="league code (e.g. olympic-flame-ab3d)" />
+          <select name="teamId" required className="input">
+            <option value="">Choose your team…</option>
+            {myTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <Button type="submit" variant="secondary">Join league</Button>
+        </form>
+      </Card>
       </div>
     );
   }
@@ -41,6 +53,8 @@ export default async function LeaguePage() {
         <p className="mb-2 text-sm text-slate-500">Share this — families pick their team and sign up, and anyone can see the standings.</p>
         <p className="break-all rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{publicUrl}</p>
         <div className="mt-2"><CopyButton text={publicUrl} label="Copy league link" /></div>
+        <p className="mt-3 text-sm text-slate-600">Coaches join with code: <span className="font-mono font-semibold">{org.code}</span></p>
+        <div className="mt-1"><CopyButton text={org.code} label="Copy coach code" /></div>
       </Card>
 
       <Card>
@@ -79,6 +93,18 @@ export default async function LeaguePage() {
           </Card>
         )}
       </div>
+      <Card>
+        <SectionTitle>Join another league</SectionTitle>
+        <p className="mb-2 text-sm text-slate-500">Got a league code from another organizer? Add one of your teams to their league.</p>
+        <form action={joinLeagueByCode} className="space-y-2">
+          <input name="code" required className="input" placeholder="league code (e.g. olympic-flame-ab3d)" />
+          <select name="teamId" required className="input">
+            <option value="">Choose your team…</option>
+            {myTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <Button type="submit" variant="secondary">Join league</Button>
+        </form>
+      </Card>
     </div>
   );
 }
