@@ -6,6 +6,7 @@ import { inviteLink } from "@/lib/whatsapp";
 import { updateTeam, regenerateCode, inviteCoach, removeCoach, updateRules } from "./actions";
 import { SPORT_OPTIONS, sportFromString } from "@/lib/sports";
 import { readTeamRules } from "@/lib/teamrules";
+import { isStripeConfigured } from "@/lib/payments";
 import { getStaff } from "@/lib/data";
 import { Badge } from "@/components/ui";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -94,6 +95,12 @@ export default async function SettingsPage() {
             <Field label="Minutes each" name="periodMin">
               <input id="periodMin" name="periodMin" type="number" min={1} max={60} className="input" defaultValue={rules.periodMin ?? ""} placeholder={String(sport.defaultPeriodMin || "—")} />
             </Field>
+          </div>
+          <div className="border-t border-slate-100 pt-3">
+            <Field label="Registration fee per player (CAD, optional)" name="fee">
+              <input id="fee" name="fee" type="number" min={0} step="1" className="input" defaultValue={rules.feeCents ? (rules.feeCents / 100).toString() : ""} placeholder="e.g. 120" />
+            </Field>
+            <p className="mt-1 text-xs text-slate-400">{isStripeConfigured() ? "Parents can pay this in-app via card." : "Set a fee now; add your Stripe keys in Vercel to switch on card payments. Parents are never charged until you do."}</p>
           </div>
           <Button type="submit">Save rules</Button>
         </form>

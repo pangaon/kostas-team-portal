@@ -76,7 +76,8 @@ export async function updateRules(formData: FormData) {
   const { writeTeamRules } = await import("@/lib/teamrules");
   const num = (k: string) => { const v = parseInt(String(formData.get(k) ?? ""), 10); return Number.isFinite(v) && v > 0 ? v : null; };
   const str = (k: string) => { const v = String(formData.get(k) ?? "").trim(); return v === "" ? null : v; };
-  await writeTeamRules(team.id, { league: str("league"), onField: num("onField"), periodCount: num("periodCount"), periodMin: num("periodMin") });
+  const feeDollars = parseFloat(String(formData.get("fee") ?? "")); const feeCents = Number.isFinite(feeDollars) && feeDollars > 0 ? Math.round(feeDollars * 100) : null;
+  await writeTeamRules(team.id, { league: str("league"), onField: num("onField"), periodCount: num("periodCount"), periodMin: num("periodMin"), feeCents });
   revalidatePath("/team/settings");
   redirect("/team/settings?saved=" + encodeURIComponent("League & rules saved"));
 }

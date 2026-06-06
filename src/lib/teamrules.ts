@@ -8,7 +8,7 @@ async function ensure() {
   return a;
 }
 
-export type TeamRules = { league?: string | null; onField?: number | null; periodCount?: number | null; periodMin?: number | null };
+export type TeamRules = { league?: string | null; onField?: number | null; periodCount?: number | null; periodMin?: number | null; feeCents?: number | null };
 
 export async function readTeamRules(teamId: string): Promise<TeamRules> {
   const a = await ensure();

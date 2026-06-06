@@ -11,6 +11,8 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { CopyButton } from "@/components/CopyButton";
 import { readProfiles } from "@/lib/playerprofile";
 import { readIntakes } from "@/lib/parentintake";
+import { readTeamRules } from "@/lib/teamrules";
+import { paidSet } from "@/lib/payments";
 
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
@@ -152,6 +154,9 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
   const profilesByPlayer = await readProfiles(approvedA.map((p) => p.id));
   const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
   const origin = originFromEnv();
+  const teamRules = await readTeamRules(team.id);
+  const feeOn = (teamRules.feeCents ?? 0) > 0;
+  const paid = feeOn ? await paidSet(approvedA.map((p) => p.id)) : new Set<string>();
   const nudgeLink = (phone: string | null | undefined, token: string) => {
     const d = (phone ?? "").replace(/\D/g, "");
     const intl = d.length === 10 ? "1" + d : d;
@@ -266,6 +271,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {p.claimed ? <Badge color="green">Joined</Badge> : <Badge color="slate">Not joined</Badge>}
+                    {feeOn && (paid.has(p.id) ? <Badge color="green">Paid</Badge> : <Badge color="amber">Unpaid</Badge>)}
                     {!p.claimed && primaryGuardian(p)?.phone && (
                       <a href={nudgeLink(primaryGuardian(p)?.phone, p.access_token)} target="_blank" rel="noopener" className="text-xs font-semibold text-emerald-600">\ud83d\udcf2 Nudge</a>
                     )}

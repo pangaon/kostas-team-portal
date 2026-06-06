@@ -5,6 +5,9 @@ import { fmtDate } from "@/lib/format";
 import { Card, PageTitle, SectionTitle, Button, EmptyState } from "@/components/ui";
 import type { Guardian, AvailabilityBlock } from "@/lib/types";
 import { readIntake } from "@/lib/parentintake";
+import { readTeamRules } from "@/lib/teamrules";
+import { isPaid, isStripeConfigured } from "@/lib/payments";
+import { PayRegistration } from "@/components/PayRegistration";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +28,10 @@ export default async function ProfilePage() {
   const { data: realPlayer } = await admin.from("players").select("strong_foot, preferred_position").eq("id", player.id).maybeSingle();
   const rp = (realPlayer as { strong_foot: string | null; preferred_position: string | null } | null) ?? null;
   const intake = await readIntake(player.id);
+  const rules = await readTeamRules(team.id);
+  const feeCents = rules.feeCents ?? 0;
+  const paid = feeCents > 0 ? await isPaid(player.id) : false;
+  const stripeOn = isStripeConfigured();
 
   const { data: blockData } = await admin
     .from("availability_blocks")
@@ -36,6 +43,21 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-5">
       <PageTitle title={`${player.first_name}'s profile`} subtitle={team.name} />
+      {feeCents > 0 && (
+        <Card className={paid ? "border-emerald-200 bg-emerald-50" : "border-brand-200 bg-brand-50"}>
+          <SectionTitle>Registration</SectionTitle>
+          {paid ? (
+            <p className="text-sm font-semibold text-emerald-700">✓ Registration paid — thank you!</p>
+          ) : stripeOn ? (
+            <div className="space-y-2">
+              <p className="text-sm text-slate-600">Season registration for {player.first_name}: <b>${(feeCents/100).toFixed(2)}</b></p>
+              <PayRegistration amount={(feeCents/100).toFixed(2)} />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">Season registration: <b>${(feeCents/100).toFixed(2)}</b>. Your coach will share how to pay.</p>
+          )}
+        </Card>
+      )}
 
       <form action={updateIntake}>
         <Card className="space-y-3 border-brand-200 bg-brand-50/40">
