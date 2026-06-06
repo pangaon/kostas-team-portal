@@ -8,20 +8,24 @@ async function ensure() {
   if (!ensured) { try { const { data } = await a.storage.getBucket(BUCKET); if (!data) await a.storage.createBucket(BUCKET, { public: false }); } catch {} ensured = true; }
   return a;
 }
-
-export type PlayerProfile = { skills: string[] };
-
+export type PlayerNote = { text: string; at: string };
+export type PlayerProfile = { skills: string[]; notes: PlayerNote[] };
 
 export async function readPlayerProfile(playerId: string): Promise<PlayerProfile> {
   const a = await ensure();
-  try { const { data } = await a.storage.from(BUCKET).download(playerId); if (!data) return { skills: [] }; return JSON.parse(await data.text()); } catch { return { skills: [] }; }
+  try { const { data } = await a.storage.from(BUCKET).download(playerId); if (!data) return { skills: [], notes: [] }; const p = JSON.parse(await data.text()); return { skills: p.skills ?? [], notes: p.notes ?? [] }; } catch { return { skills: [], notes: [] }; }
 }
 export async function writePlayerProfile(playerId: string, profile: PlayerProfile): Promise<void> {
   const a = await ensure();
   try { await a.storage.from(BUCKET).upload(playerId, Buffer.from(JSON.stringify(profile)), { upsert: true, contentType: "application/json" }); } catch {}
 }
-export async function readProfiles(ids: string[]): Promise<Record<string, string[]>> {
-  const out: Record<string, string[]> = {};
-  await Promise.all(ids.map(async (id) => { const p = await readPlayerProfile(id); if (p.skills?.length) out[id] = p.skills; }));
+export async function appendNote(playerId: string, text: string): Promise<void> {
+  const p = await readPlayerProfile(playerId);
+  p.notes = [{ text: text.slice(0, 500), at: new Date().toISOString() }, ...(p.notes ?? [])].slice(0, 50);
+  await writePlayerProfile(playerId, p);
+}
+export async function readProfiles(ids: string[]): Promise<Record<string, PlayerProfile>> {
+  const out: Record<string, PlayerProfile> = {};
+  await Promise.all(ids.map(async (id) => { const p = await readPlayerProfile(id); if (p.skills?.length || p.notes?.length) out[id] = p; }));
   return out;
 }

@@ -149,7 +149,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
     });
 
   const approvedA = await withAvatars(approved);
-  const skillsByPlayer = await readProfiles(approvedA.map((p) => p.id));
+  const profilesByPlayer = await readProfiles(approvedA.map((p) => p.id));
   const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
   const origin = originFromEnv();
   const nudgeLink = (phone: string | null | undefined, token: string) => {
@@ -316,7 +316,17 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                         {intakeByPlayer[p.id].helpMe && <p className="text-slate-700"><b>Coaching tips:</b> {intakeByPlayer[p.id].helpMe}</p>}
                       </div>
                     )}
-                    <CoachPlayerTools playerId={p.id} parentName={primaryGuardian(p)?.name ?? ""} initialSkills={skillsByPlayer[p.id] ?? []} />
+                    {(profilesByPlayer[p.id]?.notes?.length ?? 0) > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">📝 Notes</p>
+                        <ul className="space-y-1 text-sm text-slate-700">
+                          {profilesByPlayer[p.id]!.notes.slice(0, 8).map((n, i) => (
+                            <li key={i}>{n.text} <span className="text-xs text-slate-400">· {new Date(n.at).toLocaleDateString()}</span></li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <CoachPlayerTools playerId={p.id} parentName={primaryGuardian(p)?.name ?? ""} initialSkills={profilesByPlayer[p.id]?.skills ?? []} />
                   </div>
                 </details>
                 <div className="flex border-t border-slate-100 text-sm font-medium">

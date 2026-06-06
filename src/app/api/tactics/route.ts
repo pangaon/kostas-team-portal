@@ -35,6 +35,11 @@ export async function POST(req: Request) {
       await db.from("players").update({ strength: val }).eq("id", pid).eq("team_id", team.id);
       return NextResponse.json({ ok: true, strength: val });
     }
+    case "setpieces": {
+      const { writeSetPieces } = await import("@/lib/setpieces");
+      await writeSetPieces(team.id, (p.roles ?? {}) as Record<string, string>);
+      return NextResponse.json({ ok: true });
+    }
     case "delete": {
       await db.from("lineup_plans").delete().eq("id", p.id).eq("team_id", team.id);
       return NextResponse.json({ ok: true });

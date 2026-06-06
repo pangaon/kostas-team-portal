@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { readSetPieces, SET_PIECE_FIELDS } from "@/lib/setpieces";
 import { BackBar } from "@/components/BackBar";
 import { notFound } from "next/navigation";
 import { requireCoachTeam } from "@/lib/auth";
@@ -46,6 +47,7 @@ export default async function GameSheetPage({
     getVolunteers(event.id),
     getAttendance(event.id),
   ]);
+  const setPieces = await readSetPieces(team.id);
   const approved = players.filter((p) => p.status === "approved");
   const byPlayer = new Map<string, PlayerWithGuardians>(approved.map((p) => [p.id, p]));
   const rosterByPlayer = new Map<string, GameRosterRow>(roster.map((r) => [r.player_id, r]));
@@ -158,6 +160,18 @@ export default async function GameSheetPage({
               })}
             </tbody>
           </table>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-lg font-bold">Set pieces</h2>
+          {SET_PIECE_FIELDS.some((f) => setPieces[f.key]) ? (
+            <ul className="space-y-0.5 text-sm">
+              {SET_PIECE_FIELDS.filter((f) => setPieces[f.key]).map((f) => {
+                const pl = byPlayer.get(setPieces[f.key] as string);
+                return <li key={f.key}><span className="font-medium">{f.label}:</span> {pl ? playerName(pl) : "—"}</li>;
+              })}
+            </ul>
+          ) : <p className="text-sm text-slate-500">Not set.</p>}
         </section>
 
         <section>
