@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Team } from "@/lib/types";
+
+const TEAM_COOKIE = "coach_team";
 
 export async function requireUser() {
   const supabase = createClient();
@@ -10,9 +13,8 @@ export async function requireUser() {
   return data.user;
 }
 
-// A coach's team = one they OWN, or one they're an ACTIVE member of.
-// Also auto-claims any pending email invites addressed to this user.
-async function resolveCoachTeam(user: { id: string; email?: string | null }): Promise<Team | null> {
+// All teams a coach owns or is an active member of (auto-claims email invites first).
+export async function listCoachTeams(user: { id: string; email?: string | null }): Promise<Team[]> {
   const admin = createAdminClient();
   if (user.email) {
     await admin.from("team_members")
@@ -21,18 +23,32 @@ async function resolveCoachTeam(user: { id: string; email?: string | null }): Pr
       .eq("status", "invited");
   }
   const { data: owned } = await admin.from("teams").select("*")
-    .eq("created_by", user.id).order("created_at", { ascending: true }).limit(1);
-  if (owned?.[0]) return owned[0] as Team;
+    .eq("created_by", user.id).order("created_at", { ascending: true });
+  const ownedTeams = (owned as Team[]) ?? [];
+  const ownedIds = new Set(ownedTeams.map((t) => t.id));
 
   const { data: mem } = await admin.from("team_members").select("team_id")
-    .eq("user_id", user.id).eq("status", "active")
-    .order("created_at", { ascending: true }).limit(1);
-  if (mem?.[0]) {
-    const { data: t } = await admin.from("teams").select("*")
-      .eq("id", (mem[0] as { team_id: string }).team_id).maybeSingle();
-    return (t as Team) ?? null;
+    .eq("user_id", user.id).eq("status", "active");
+  const memberIds = [...new Set((mem ?? []).map((m: { team_id: string }) => m.team_id))].filter((id) => !ownedIds.has(id));
+  let memberTeams: Team[] = [];
+  if (memberIds.length) {
+    const { data: t } = await admin.from("teams").select("*").in("id", memberIds).order("created_at", { ascending: true });
+    memberTeams = (t as Team[]) ?? [];
   }
-  return null;
+  return [...ownedTeams, ...memberTeams];
+}
+
+// Resolve the coach's CURRENT team: the one selected via cookie (if they still
+// have access to it), otherwise their first team.
+async function resolveCoachTeam(user: { id: string; email?: string | null }): Promise<Team | null> {
+  const teams = await listCoachTeams(user);
+  if (!teams.length) return null;
+  const selected = cookies().get(TEAM_COOKIE)?.value;
+  if (selected) {
+    const match = teams.find((t) => t.id === selected);
+    if (match) return match;
+  }
+  return teams[0];
 }
 
 export async function requireCoachTeam(): Promise<{ userId: string; team: Team }> {

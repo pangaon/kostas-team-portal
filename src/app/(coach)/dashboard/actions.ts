@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { requireUser, requireCoachTeam } from "@/lib/auth";
 import { notifyTeam } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,10 +15,6 @@ export async function createTeam(formData: FormData) {
   const age_group = String(formData.get("age_group") || "").trim();
   if (!name) return;
   const admin = createAdminClient();
-  // Guard: a coach owns exactly one team. If they already have one, don't
-  // create a duplicate (this caused players to look like they "vanished").
-  const { data: existingTeam } = await admin.from("teams").select("id").eq("created_by", user.id).order("created_at", { ascending: true }).limit(1);
-  if (existingTeam?.[0]) { redirect("/dashboard"); }
   let code = `${slugify(name)}-${season ? slugify(season) : randomCode(4)}`.slice(0, 40);
   // ensure unique
   const { data: exists } = await admin.from("teams").select("id").eq("invite_code", code).maybeSingle();
@@ -25,7 +22,10 @@ export async function createTeam(formData: FormData) {
   const { data: team } = await admin.from("teams")
     .insert({ name, sport, season, age_group, invite_code: code, created_by: user.id })
     .select("*").single();
-  if (team) await admin.from("team_members").insert({ team_id: team.id, user_id: user.id, role: "coach", status: "active" });
+  if (team) {
+    await admin.from("team_members").insert({ team_id: team.id, user_id: user.id, role: "coach", status: "active" });
+    cookies().set("coach_team", team.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  }
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
@@ -46,4 +46,11 @@ export async function sendTodayReminders() {
       ? "Already sent for today"
       : "No events today";
   redirect("/dashboard?saved=" + encodeURIComponent(msg));
+}
+
+
+export async function setCurrentTeam(formData: FormData) {
+  const teamId = String(formData.get("teamId") ?? "");
+  if (teamId) cookies().set("coach_team", teamId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  redirect("/dashboard");
 }

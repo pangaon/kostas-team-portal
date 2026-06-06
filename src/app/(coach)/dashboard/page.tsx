@@ -13,14 +13,16 @@ import { CoachPushControls } from "@/components/CoachPushControls";
 import { Onboarding } from "@/components/Onboarding";
 import { Hint } from "@/components/Hint";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: { new?: string; saved?: string; setup?: string } }) {
   const { team } = await getCoachTeam();
+  const showCreate = !team || searchParams?.new === "1";
   const origin = originFromEnv();
 
-  if (!team) {
+  if (showCreate) {
     return (
       <div className="mx-auto max-w-md">
-        <PageTitle title="Create your team" subtitle="Set this up once to get your invite link." />
+        <PageTitle title={team ? "Add another team" : "Create your team"} subtitle="Set this up once to get your invite link." />
+        {team && <Link href="/dashboard" className="mb-3 inline-block text-sm font-semibold text-brand-700">← Back to {team.name}</Link>}
         <Card>
           <form action={createTeam} className="space-y-4">
             <div><label className="label">Team name</label><input name="name" required className="input" placeholder="Kostas Meat" /></div>

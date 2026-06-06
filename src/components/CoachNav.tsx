@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { TeamSwitcher } from "@/components/TeamSwitcher";
 
 const primary = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
@@ -22,7 +23,7 @@ const more = [
 ];
 const allDesktop = [...primary, ...more];
 
-export function CoachNav({ teamName }: { teamName: string }) {
+export function CoachNav({ teamName, teams, currentId }: { teamName: string; teams: { id: string; name: string }[]; currentId: string }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const moreActive = more.some((m) => m.href !== "/parent" && path.startsWith(m.href));
@@ -35,7 +36,7 @@ export function CoachNav({ teamName }: { teamName: string }) {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white px-3 py-4 lg:flex">
         <Link href="/dashboard" className="mb-5 flex items-center gap-2 px-2">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">⚽</span>
-          <span className="truncate text-base font-bold tracking-tight">{teamName}</span>
+          <span className="truncate text-base font-bold tracking-tight"><TeamSwitcher teams={teams} currentId={currentId} currentName={teamName} /></span>
         </Link>
         <nav className="flex-1 space-y-0.5 overflow-y-auto">
           {allDesktop.map((t) => {
@@ -61,7 +62,7 @@ export function CoachNav({ teamName }: { teamName: string }) {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand-600 text-sm font-bold text-white">⚽</span>
-            <span className="font-bold tracking-tight">{teamName}</span>
+            <TeamSwitcher teams={teams} currentId={currentId} currentName={teamName} />
           </Link>
           <form action="/logout" method="post"><button className="text-sm font-medium text-slate-500 hover:text-slate-800">Sign out</button></form>
         </div>
