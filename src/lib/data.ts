@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Player, Guardian, TeamEvent, Attendance, SnackSignup, Announcement,
   GameRosterRow, VolunteerRole, Lineup, PlayerWithGuardians,
+  Team,
 } from "@/lib/types";
 
 // Coach reads: server-side, already scoped to a team the caller owns
@@ -196,4 +197,26 @@ export async function getTotalUnread(teamId: string): Promise<number> {
   const a = createAdminClient();
   const { count } = await a.from("coach_inbox").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("is_read", false).neq("from_name", COACH_SENDER);
   return count ?? 0;
+}
+
+export async function getTeamsByIds(ids: string[]): Promise<Team[]> {
+  if (!ids.length) return [];
+  const a = createAdminClient();
+  const { data } = await a.from("teams").select("*").in("id", ids);
+  return (data as Team[]) ?? [];
+}
+
+export type StandingRow = { teamId: string; name: string; played: number; w: number; d: number; l: number; gf: number; ga: number; pts: number };
+export async function leagueStandings(teamIds: string[]): Promise<StandingRow[]> {
+  const teams = await getTeamsByIds(teamIds);
+  const rows = await Promise.all(teams.map(async (t) => {
+    const results = await getResults(t.id);
+    let w = 0, d = 0, l = 0, gf = 0, ga = 0;
+    for (const r of results) {
+      gf += r.our_score; ga += r.opp_score;
+      if (r.our_score > r.opp_score) w++; else if (r.our_score === r.opp_score) d++; else l++;
+    }
+    return { teamId: t.id, name: t.name, played: w + d + l, w, d, l, gf, ga, pts: w * 3 + d };
+  }));
+  return rows.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
 }

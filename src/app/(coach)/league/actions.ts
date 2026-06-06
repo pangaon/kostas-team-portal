@@ -1,0 +1,27 @@
+"use server";
+import { redirect } from "next/navigation";
+import { requireUser, listCoachTeams } from "@/lib/auth";
+import { createOrg, getOrgForOwner, setOrgTeams, renameOrg } from "@/lib/orgs";
+
+export async function createLeague(formData: FormData) {
+  const user = await requireUser();
+  const name = String(formData.get("name") ?? "").trim();
+  if (name) await createOrg(user.id, name);
+  redirect("/league");
+}
+export async function renameLeague(formData: FormData) {
+  const user = await requireUser();
+  const org = await getOrgForOwner(user.id);
+  const name = String(formData.get("name") ?? "").trim();
+  if (org && name) await renameOrg(org.id, name);
+  redirect("/league?saved=" + encodeURIComponent("Saved"));
+}
+export async function setLeagueTeams(formData: FormData) {
+  const user = await requireUser();
+  const org = await getOrgForOwner(user.id);
+  if (!org) redirect("/league");
+  const mine = new Set((await listCoachTeams(user)).map((t) => t.id));
+  const ids = formData.getAll("team").map(String).filter((id) => mine.has(id));
+  await setOrgTeams(org.id, ids);
+  redirect("/league?saved=" + encodeURIComponent("Teams updated"));
+}

@@ -12,6 +12,7 @@ const primary = [
 ];
 const more = [
   { href: "/team/season", label: "Season", icon: "🏆" },
+  { href: "/league", label: "League", icon: "🏟️" },
   { href: "/team/attendance", label: "Attendance", icon: "✅" },
   { href: "/team/snacks", label: "Snacks", icon: "🍎" },
   { href: "/team/poll", label: "Practice poll", icon: "📋" },
