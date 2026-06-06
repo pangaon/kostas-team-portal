@@ -70,6 +70,19 @@ export async function upsertPlayer(formData: FormData) {
   const gPhone = nullable(s(formData, "guardian1_phone"));
   const gEmail = nullable(s(formData, "guardian1_email"));
   const gRel = nullable(s(formData, "guardian1_relationship"));
+  const g2Name = s(formData, "guardian2_name");
+  const g2Phone = nullable(s(formData, "guardian2_phone"));
+  const g2Email = nullable(s(formData, "guardian2_email"));
+  const g2Rel = nullable(s(formData, "guardian2_relationship"));
+  async function upsertSecondGuardian(playerId: string) {
+    if (!g2Name) return;
+    const { data: prim } = await db.from("guardians").select("id").eq("player_id", playerId).eq("is_primary", true).maybeSingle();
+    const { data: others } = await db.from("guardians").select("id").eq("player_id", playerId).eq("is_primary", false);
+    const fields = { name: g2Name, phone: g2Phone, email: g2Email, relationship: g2Rel, team_id: team.id, is_primary: false, player_id: playerId };
+    if (others && others.length) await db.from("guardians").update(fields).eq("id", others[0].id);
+    else await db.from("guardians").insert(fields);
+    void prim;
+  }
 
   if (id) {
     const { data: existing } = await db.from("players").select("id, team_id").eq("id", id).maybeSingle();
@@ -91,6 +104,7 @@ export async function upsertPlayer(formData: FormData) {
         await db.from("guardians").insert(gFields);
       }
     }
+    await upsertSecondGuardian(id);
   } else {
     const { data: inserted } = await db
       .from("players")
@@ -102,6 +116,7 @@ export async function upsertPlayer(formData: FormData) {
         phone: gPhone, email: gEmail, relationship: gRel, is_primary: true,
       });
     }
+    if (inserted) await upsertSecondGuardian(inserted.id);
   }
 
   revalidatePath("/team/roster");

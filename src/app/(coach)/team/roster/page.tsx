@@ -14,9 +14,14 @@ import { readIntakes } from "@/lib/parentintake";
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
 }
+function secondGuardian(p: PlayerWithGuardians): Guardian | undefined {
+  const prim = primaryGuardian(p);
+  return p.guardians.find((g) => g.id !== prim?.id);
+}
 
 function PlayerForm({ player }: { player?: PlayerWithGuardians }) {
   const g = player ? primaryGuardian(player) : undefined;
+  const g2 = player ? secondGuardian(player) : undefined;
   return (
     <Card>
       <SectionTitle>{player ? "Edit player" : "Add player"}</SectionTitle>
@@ -92,6 +97,28 @@ function PlayerForm({ player }: { player?: PlayerWithGuardians }) {
               </Field>
               <Field label="Relationship" name="guardian1_relationship">
                 <input id="guardian1_relationship" name="guardian1_relationship" className="input" defaultValue={g?.relationship ?? ""} />
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-3">
+          <SectionTitle>Second guardian (optional)</SectionTitle>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Name" name="guardian2_name">
+                <input id="guardian2_name" name="guardian2_name" className="input" defaultValue={g2?.name ?? ""} placeholder="e.g. Olivia's Dad" />
+              </Field>
+              <Field label="Phone" name="guardian2_phone">
+                <input id="guardian2_phone" name="guardian2_phone" className="input" defaultValue={g2?.phone ?? ""} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Email" name="guardian2_email">
+                <input id="guardian2_email" name="guardian2_email" type="email" className="input" defaultValue={g2?.email ?? ""} />
+              </Field>
+              <Field label="Relationship" name="guardian2_relationship">
+                <input id="guardian2_relationship" name="guardian2_relationship" className="input" defaultValue={g2?.relationship ?? ""} />
               </Field>
             </div>
           </div>
