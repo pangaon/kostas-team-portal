@@ -224,6 +224,11 @@ export function LiveGameClient(props: {
     setFieldTracked(next);
     for (const p of players) post("field", { player_id: p.id, status: next[p.id].status, position: next[p.id].position });
   };
+  const addPlayerNote = async (id: string, name: string) => {
+    const t = (typeof window !== "undefined" ? window.prompt(`Quick note for ${name}:`) : "")?.trim();
+    if (!t) return;
+    await fetch("/api/player", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "note", playerId: id, text: t }) }).catch(() => {});
+  };
   const addNote = async () => { const t = noteText.trim(); if (!t) return; const stamped = secInHalf > 0 ? `H${half} ${fmtMin(secInHalf)} ${t}` : t; setNoteText(""); const res = await post("note", { note: stamped }); setNotes((n) => [...n, res?.line ?? stamped]); };
   const planSub = async () => {
     if (!outSel || !inSel || outSel === inSel) return;
@@ -369,6 +374,7 @@ export function LiveGameClient(props: {
             <PlayerAvatar name={fullName(p)} photoUrl={p.avatar_url} size={32} />
             <span className="flex-1 text-sm font-semibold">{field[p.id]?.position === "GK" ? "🧤 " : ""}{p.first_name}{p.jersey_number ? ` #${p.jersey_number}` : ""}{pendingOut.has(p.id) && <span className="ml-1 rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-700">SUBBING OFF</span>}</span>
             <span className="text-xs font-semibold tabular-nums text-slate-400">{fmtMin(liveMins(p.id))}</span>
+            <button onClick={() => addPlayerNote(p.id, p.first_name)} aria-label={`Note for ${p.first_name}`} className="rounded-lg px-1.5 py-1 text-sm active:scale-90" title="Quick note">📝</button>
             <select value={field[p.id]?.position ?? ""} onChange={(e) => setPos(p.id, e.target.value)} className="input !w-auto py-1 text-sm">
               <option value="">pos</option>{sport.positions.map((x) => <option key={x} value={x}>{x}</option>)}
             </select>

@@ -6,6 +6,8 @@ import { TacticsBoard } from "./TacticsBoard";
 import { withAvatars } from "@/lib/avatars";
 import { Onboarding } from "@/components/Onboarding";
 import { sportFromString } from "@/lib/sports";
+import { readSetPieces } from "@/lib/setpieces";
+import { SetPieceRoles } from "@/components/SetPieceRoles";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
     return (<div className="space-y-4"><PageTitle title="Tactics" subtitle="Build your lineup on the pitch" /><EmptyState title="No game to plan yet" hint="Add a game on the Schedule first." /></div>);
   }
   const players = await withAvatars((await getPlayers(team.id)).filter((p) => p.status === "approved"));
-  const [plans, att] = await Promise.all([getLineupPlans(event.id), getAttendance(event.id)]);
+  const [plans, att, setPieces] = await Promise.all([getLineupPlans(event.id), getAttendance(event.id), readSetPieces(team.id)]);
   const attendingIds = att.filter((a) => a.status === "attending").map((a) => a.player_id);
 
   return (
@@ -46,6 +48,9 @@ export default async function TacticsPage({ searchParams }: { searchParams: { ev
         formations={sport.formations}
         surface={sport.surface}
       />
+      {sport.surface === "pitch" && (
+        <SetPieceRoles eventId={event.id} initial={setPieces} players={players.map((p) => ({ id: p.id, first_name: p.first_name, last_name: p.last_name, jersey_number: p.jersey_number }))} />
+      )}
     </div>
   );
 }

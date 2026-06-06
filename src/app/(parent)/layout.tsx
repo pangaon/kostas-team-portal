@@ -17,10 +17,9 @@ export default async function ParentLayout({ children }: { children: ReactNode }
           <p className="mt-2 text-slate-600">
             Open your team&rsquo;s invite link to join — ask your coach for it.
           </p>
-          <p className="mt-4">
-            <Link href="/" className="font-semibold text-brand-700">
-              Back to start
-            </Link>
+          <p className="mt-4 flex flex-col gap-2">
+            <Link href="/signin" className="btn-primary">Sign in with email</Link>
+            <Link href="/" className="text-sm font-semibold text-brand-700">Have an invite link? Tap it instead</Link>
           </p>
         </div>
       </div>
