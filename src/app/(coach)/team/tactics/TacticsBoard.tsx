@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
 import { Undo2, Sparkles, Eraser, Share2, Save, Plus, X } from "lucide-react";
-import { FORMATIONS_8, type LineupSlot, type LineupPlan } from "@/lib/types";
+import { type LineupSlot, type LineupPlan } from "@/lib/types";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 type P = {
@@ -16,19 +16,22 @@ type P = {
 const STRENGTH_COLORS: Record<number, string> = { 5: "#10b981", 4: "#22c55e", 3: "#f59e0b", 2: "#f97316", 1: "#f43f5e" };
 const ringColor = (s: number | null) => (s && STRENGTH_COLORS[s]) || "rgba(255,255,255,.85)";
 
-function buildSlots(formation: string, prev: LineupSlot[]): LineupSlot[] {
-  const base = FORMATIONS_8[formation] ?? FORMATIONS_8["3-3-1"];
+function buildSlots(formations: Record<string, { pos: string; x: number; y: number }[]>, formation: string, prev: LineupSlot[]): LineupSlot[] {
+  const base = formations[formation] ?? Object.values(formations)[0] ?? [];
   const ids = prev.filter((s) => s.player_id).map((s) => s.player_id);
   return base.map((b, i) => ({ ...b, player_id: ids[i] ?? null }));
 }
 
-export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
+export function TacticsBoard({ eventId, players, attendingIds, initialPlans, formations, surface }: {
   eventId: string; players: P[]; attendingIds: string[]; initialPlans: LineupPlan[];
+  formations: Record<string, { pos: string; x: number; y: number }[]>; surface: string;
 }) {
+  const formationNames = Object.keys(formations);
+  const lightSurface = surface === "court" || surface === "rink";
   const [roster, setRoster] = useState<P[]>(players);
-  const [formation, setFormation] = useState(initialPlans[0]?.formation ?? "3-3-1");
+  const [formation, setFormation] = useState(initialPlans[0]?.formation && formations[initialPlans[0].formation] ? initialPlans[0].formation : formationNames[0]);
   const [slots, setSlots] = useState<LineupSlot[]>(
-    initialPlans[0]?.slots?.length ? initialPlans[0].slots : buildSlots(initialPlans[0]?.formation ?? "3-3-1", [])
+    initialPlans[0]?.slots?.length ? initialPlans[0].slots : buildSlots(formations, formationNames[0], [])
   );
   const [history, setHistory] = useState<LineupSlot[][]>([]);
   const [plans, setPlans] = useState<LineupPlan[]>(initialPlans);
@@ -67,7 +70,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
     return (b.strength ?? 0) - (a.strength ?? 0);
   }), [roster, placedIds, attendingIds]);
 
-  const changeFormation = (f: string) => { setFormation(f); apply(buildSlots(f, slots)); };
+  const changeFormation = (f: string) => { setFormation(f); apply(buildSlots(formations, f, slots)); };
 
   const placeAt = (playerId: string, slotIndex: number, fromSlot: number | null) => {
     const next = slots.map((s) => ({ ...s }));
@@ -114,7 +117,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
   const autoPick = () => {
     const pool = roster.filter((p) => attendingIds.length === 0 || attendingIds.includes(p.id)).sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0));
     const used = new Set<string>();
-    const next = buildSlots(formation, []).map((s) => ({ ...s }));
+    const next = buildSlots(formations, formation, []).map((s) => ({ ...s }));
     const gk = next.findIndex((s) => s.pos === "GK");
     if (gk >= 0) {
       const keeper = pool.find((p) => !used.has(p.id) && /gk|keep|goal/i.test(p.preferred_position || ""));
@@ -139,8 +142,8 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
       setPlanId(res.id); flash("Saved ✓");
     }
   };
-  const loadPlan = (pl: LineupPlan) => { setPlanId(pl.id); setName(pl.name); setFormation(pl.formation); apply(pl.slots?.length ? pl.slots : buildSlots(pl.formation, [])); setSel(null); };
-  const newBlank = () => { setPlanId(null); setName(`Line ${plans.length + 1}`); apply(buildSlots(formation, [])); setSel(null); flash("New blank line — Save to keep it"); };
+  const loadPlan = (pl: LineupPlan) => { setPlanId(pl.id); setName(pl.name); setFormation(pl.formation); apply(pl.slots?.length ? pl.slots : buildSlots(formations, pl.formation, [])); setSel(null); };
+  const newBlank = () => { setPlanId(null); setName(`Line ${plans.length + 1}`); apply(buildSlots(formations, formation, [])); setSel(null); flash("New blank line — Save to keep it"); };
   const delPlan = async (id: string) => { await post("delete", { id }); setPlans((ps) => ps.filter((x) => x.id !== id)); if (planId === id) { setPlanId(null); setName("Plan"); } };
   const pushGame = async () => { await post("push", { slots }); flash("Lineup sent to the game ✓"); };
 
@@ -168,7 +171,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
         {/* formation pills */}
         <div className="flex items-center justify-between">
           <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
-            {Object.keys(FORMATIONS_8).map((f) => (
+            {formationNames.map((f) => (
               <button key={f} onClick={() => changeFormation(f)}
                 className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${formation === f ? "bg-white text-brand-700 shadow-sm" : "text-slate-500"}`}>{f}</button>
             ))}
@@ -179,27 +182,9 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
         {/* PITCH */}
         <div ref={pitchRef}
           className="relative mx-auto w-full max-w-sm select-none overflow-hidden rounded-[22px] shadow-lift lg:max-w-none"
-          style={{
-            aspectRatio: "3 / 4",
-            background:
-              "radial-gradient(130% 90% at 50% 18%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%)," +
-              "radial-gradient(150% 120% at 50% 55%, rgba(0,0,0,0) 58%, rgba(0,0,0,.42))," +
-              "repeating-linear-gradient(90deg,#2b8d4f 0,#2b8d4f 11.11%,#26824a 11.11%,#26824a 22.22%)",
-            touchAction: "none",
-          }}>
-          {/* lighting + vignette */}
-          <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 80% at 50% 30%, rgba(255,255,255,.18), rgba(0,0,0,0) 55%), radial-gradient(140% 100% at 50% 100%, rgba(0,0,0,.28), rgba(0,0,0,0) 60%)" }} />
-          {/* markings */}
-          <svg viewBox="0 0 100 133" className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="0.5">
-            <rect x="3" y="3" width="94" height="127" rx="2" />
-            <line x1="3" y1="66.5" x2="97" y2="66.5" />
-            <circle cx="50" cy="66.5" r="11" />
-            <circle cx="50" cy="66.5" r="0.8" fill="rgba(255,255,255,.7)" stroke="none" />
-            <rect x="28" y="3" width="44" height="18" />
-            <rect x="40" y="3" width="20" height="8" />
-            <rect x="28" y="112" width="44" height="18" />
-            <rect x="40" y="122" width="20" height="8" />
-          </svg>
+          style={{ aspectRatio: "3 / 4", background: SURFACE_BG[surface] ?? SURFACE_BG.pitch, touchAction: "none" }}>
+          <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 80% at 50% 30%, rgba(255,255,255,.16), rgba(0,0,0,0) 55%), radial-gradient(140% 100% at 50% 100%, rgba(0,0,0,.22), rgba(0,0,0,0) 60%)" }} />
+          <SurfaceMarkings surface={surface} />
 
           {slots.map((s, i) => {
             const pl = byId(s.player_id);
@@ -219,7 +204,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
                   </div>
                 ) : (
                   <button onClick={() => tapSlot(i)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-white/45 bg-white/10 text-[10px] font-bold text-white/80 backdrop-blur-[1px] transition hover:bg-white/20">{s.pos}</button>
+                    className={`grid h-10 w-10 place-items-center rounded-full border text-[10px] font-bold backdrop-blur-[1px] transition ${lightSurface ? "border-slate-500/40 bg-black/5 text-slate-700 hover:bg-black/10" : "border-white/45 bg-white/10 text-white/80 hover:bg-white/20"}`}>{s.pos}</button>
                 )}
               </div>
             );
@@ -230,7 +215,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans }: {
         <div className="flex flex-wrap gap-2">
           <button onClick={autoPick} className="btn-primary flex-1"><Sparkles size={16} /> Auto-pick best XI</button>
           <button onClick={undo} disabled={!history.length} className="btn-ghost"><Undo2 size={16} /> Undo</button>
-          <button onClick={() => apply(buildSlots(formation, []))} className="btn-ghost"><Eraser size={16} /> Clear</button>
+          <button onClick={() => apply(buildSlots(formations, formation, []))} className="btn-ghost"><Eraser size={16} /> Clear</button>
           <button onClick={shareImage} className="btn-ghost"><Share2 size={16} /> Share</button>
         </div>
         {msg && <p className="text-center text-sm font-semibold text-emerald-600">{msg}</p>}
@@ -327,5 +312,63 @@ function StarPicker({ value, onPick }: { value: number | null; onPick: (v: numbe
           className={`text-lg leading-none transition ${value && n <= value ? "text-amber-400" : "text-slate-300"}`}>★</button>
       ))}
     </span>
+  );
+}
+
+
+const SURFACE_BG: Record<string, string> = {
+  pitch: "repeating-linear-gradient(90deg,#2b8d4f 0,#2b8d4f 11.11%,#26824a 11.11%,#26824a 22.22%)",
+  court: "linear-gradient(180deg,#d9a066,#cf9356)",
+  rink: "linear-gradient(180deg,#eaf2fb,#d8e6f5)",
+  diamond: "radial-gradient(circle at 50% 62%, #c89a5b 0 26%, #2f9b50 27%)",
+};
+
+function SurfaceMarkings({ surface }: { surface: string }) {
+  if (surface === "court") {
+    return (
+      <svg viewBox="0 0 100 133" className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="0.6">
+        <rect x="3" y="3" width="94" height="127" rx="2" />
+        <line x1="3" y1="66.5" x2="97" y2="66.5" />
+        <circle cx="50" cy="66.5" r="10" />
+        <rect x="34" y="3" width="32" height="33" /><circle cx="50" cy="36" r="10" />
+        <rect x="34" y="97" width="32" height="33" /><circle cx="50" cy="97" r="10" />
+        <path d="M14 3 A 40 40 0 0 0 14 53" /><path d="M86 3 A 40 40 0 0 1 86 53" />
+        <path d="M14 130 A 40 40 0 0 1 14 80" /><path d="M86 130 A 40 40 0 0 0 86 80" />
+      </svg>
+    );
+  }
+  if (surface === "rink") {
+    return (
+      <svg viewBox="0 0 100 133" className="pointer-events-none absolute inset-0 h-full w-full" fill="none">
+        <rect x="3" y="3" width="94" height="127" rx="14" stroke="rgba(40,80,140,.35)" strokeWidth="0.6" />
+        <line x1="3" y1="66.5" x2="97" y2="66.5" stroke="#d22" strokeWidth="1" />
+        <line x1="3" y1="44" x2="97" y2="44" stroke="#2456c8" strokeWidth="1" />
+        <line x1="3" y1="89" x2="97" y2="89" stroke="#2456c8" strokeWidth="1" />
+        <circle cx="50" cy="66.5" r="9" stroke="#2456c8" strokeWidth="0.6" />
+      </svg>
+    );
+  }
+  if (surface === "diamond") {
+    return (
+      <svg viewBox="0 0 100 133" className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="0.6">
+        <path d="M50 86 L74 60 L50 34 L26 60 Z" />
+        <rect x="48" y="84" width="4" height="4" fill="#fff" stroke="none" />
+        <rect x="72" y="58" width="4" height="4" fill="#fff" stroke="none" />
+        <rect x="48" y="32" width="4" height="4" fill="#fff" stroke="none" />
+        <rect x="24" y="58" width="4" height="4" fill="#fff" stroke="none" />
+        <circle cx="50" cy="60" r="3" />
+      </svg>
+    );
+  }
+  // pitch (soccer)
+  return (
+    <svg viewBox="0 0 100 133" className="pointer-events-none absolute inset-0 h-full w-full" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="0.5">
+      <rect x="3" y="3" width="94" height="127" rx="2" />
+      <line x1="3" y1="66.5" x2="97" y2="66.5" />
+      <circle cx="50" cy="66.5" r="11" />
+      <circle cx="50" cy="66.5" r="0.8" fill="rgba(255,255,255,.7)" stroke="none" />
+      <rect x="28" y="3" width="44" height="18" /><rect x="40" y="3" width="20" height="8" />
+      <rect x="28" y="112" width="44" height="18" /><rect x="40" y="122" width="20" height="8" />
+    </svg>
   );
 }
