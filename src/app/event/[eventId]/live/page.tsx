@@ -51,7 +51,7 @@ export default async function LiveGame({ params }: { params: { eventId: string }
       initSubs={subPlans.map((sp) => ({ id: sp.id, player_in: sp.player_in, player_out: sp.player_out, saved: true }))}
       startsBy={startsBy}
       plans={plans.map((pl) => ({ id: pl.id, name: pl.name, slots: pl.slots }))}
-      sport={{ label: sport.label, emoji: sport.emoji, scoreTerm: sport.scoreTerm, scoreEmoji: sport.scoreEmoji, onField, periodType: sport.periodType, periodCount, defaultPeriodMin: periodMin, timed: sport.timed, positions: sport.positions, hasPitch: sport.hasPitch }}
+      sport={{ label: sport.label, emoji: sport.emoji, scoreTerm: sport.scoreTerm, scoreEmoji: sport.scoreEmoji, onField, periodType: sport.periodType, periodCount, defaultPeriodMin: periodMin, timed: sport.timed, positions: sport.positions, hasPitch: sport.surface !== "diamond" }}
     />
   );
 }
