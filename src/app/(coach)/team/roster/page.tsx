@@ -3,7 +3,7 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getPlayersWithGuardians, originFromEnv } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import type { PlayerWithGuardians, Guardian } from "@/lib/types";
-import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending } from "./actions";
+import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending, resetAccessToken } from "./actions";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 import { CoachPlayerTools } from "@/components/CoachPlayerTools";
@@ -291,7 +291,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🔗 Parent access link</p>
                       <p className="mb-2 text-xs text-slate-500">Send this to a parent/guardian — tapping it logs them straight into {p.first_name}&rsquo;s parent view on their phone. No password.</p>
-                      <CopyButton text={`${origin}/access/${p.access_token}`} label="Copy parent link" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CopyButton text={`${origin}/access/${p.access_token}`} label="Copy parent link" />
+                        <form action={resetAccessToken}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <ConfirmButton message={`Generate a new link for ${p.first_name}? Anyone using the old link — including a parent already signed in on this child — will need the new one.`} className="btn-ghost text-xs">Reset link</ConfirmButton>
+                        </form>
+                      </div>
                     </div>
                     {intakeByPlayer[p.id] && (
                       <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm">

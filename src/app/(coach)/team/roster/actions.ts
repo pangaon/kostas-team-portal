@@ -188,3 +188,15 @@ export async function mergePending(formData: FormData) {
   revalidatePath("/team/roster");
   redirect("/team/roster?saved=" + encodeURIComponent("Merged into existing player"));
 }
+
+export async function resetAccessToken(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  const id = s(formData, "id");
+  if (!id) redirect("/team/roster");
+  const { data: pl } = await db.from("players").select("id, team_id").eq("id", id).maybeSingle();
+  if (!pl || pl.team_id !== team.id) redirect("/team/roster");
+  await db.from("players").update({ access_token: crypto.randomUUID() }).eq("id", id).eq("team_id", team.id);
+  revalidatePath("/team/roster");
+  redirect("/team/roster?saved=" + encodeURIComponent("New parent link created — old links no longer work"));
+}
