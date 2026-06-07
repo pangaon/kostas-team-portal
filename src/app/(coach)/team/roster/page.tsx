@@ -3,7 +3,7 @@ import { requireCoachTeam } from "@/lib/auth";
 import { getPlayersWithGuardians, originFromEnv } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import type { PlayerWithGuardians, Guardian } from "@/lib/types";
-import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending, resetAccessToken } from "./actions";
+import { approvePlayer, rejectPlayer, deletePlayer, upsertPlayer, uploadAvatar, bulkAddPlayers, mergePending, resetAccessToken, mergePlayers } from "./actions";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { withAvatars } from "@/lib/avatars";
 import { CoachPlayerTools } from "@/components/CoachPlayerTools";
@@ -13,6 +13,13 @@ import { readProfiles } from "@/lib/playerprofile";
 import { readIntakes } from "@/lib/parentintake";
 import { readTeamRules } from "@/lib/teamrules";
 import { paidSet } from "@/lib/payments";
+
+function lev(a: string, b: string): number {
+  const m = a.length, n = b.length; const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[m][n];
+}
 
 function primaryGuardian(p: PlayerWithGuardians): Guardian | undefined {
   return p.guardians.find((g) => g.is_primary) ?? p.guardians[0];
@@ -157,13 +164,27 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
   const teamRules = await readTeamRules(team.id);
   const feeOn = (teamRules.feeCents ?? 0) > 0;
   const paid = feeOn ? await paidSet(approvedA.map((p) => p.id)) : new Set<string>();
+  const norm = (x: string) => (x ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
+  const mergeInto: Record<string, { id: string; name: string }> = {};
+  for (let i = 0; i < approvedA.length; i++) {
+    const p = approvedA[i];
+    for (let j = 0; j < i; j++) {
+      const q = approvedA[j];
+      if (mergeInto[q.id]) continue;
+      const sameFirst = norm(p.first_name) === norm(q.first_name);
+      const lastClose = lev(norm(p.last_name), norm(q.last_name)) <= 2;
+      const pc = contactsOf(p); const qc = contactsOf(q);
+      const shared = [...pc].some((c) => qc.has(c));
+      if (sameFirst && (lastClose || shared)) { mergeInto[p.id] = { id: q.id, name: `${q.first_name} ${q.last_name}` }; break; }
+    }
+  }
   const nudgeLink = (phone: string | null | undefined, token: string) => {
     const d = (phone ?? "").replace(/\D/g, "");
     const intl = d.length === 10 ? "1" + d : d;
     const msg = `Hi! Coach here \u2014 here's your link for the ${team.name} team app: ${origin}/access/${token}  Tap it and you're in, no password. Say yes to notifications for game-day reminders \ud83d\udc4d`;
     return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
   };
-  const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const findDup = (pend: PlayerWithGuardians): PlayerWithGuardians | undefined => {
     const pc = contactsOf(pend);
     const fn = pend.first_name.toLowerCase();
@@ -268,6 +289,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.first_name} {p.last_name}</p>
                     <p className="truncate text-xs text-slate-500">{[p.preferred_position, p.strong_foot ? `${p.strong_foot} foot` : null, strengthLabel].filter(Boolean).join(" · ") || "—"}</p>
+                    {p.guardians.length > 0 && <p className="truncate text-xs text-slate-400">👤 {p.guardians.map((g) => g.name).filter(Boolean).join(", ")}</p>}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {p.claimed ? <Badge color="green">Joined</Badge> : <Badge color="slate">Not joined</Badge>}
@@ -278,9 +300,19 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
                     {p.allergies && <Badge color="red">Allergy</Badge>}
                   </div>
                 </div>
-                {isDup && (
-                  <div className="mx-3 mb-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">⚠ Possible duplicate name — keep the one with real parent info, delete the other.</div>
-                )}
+                {mergeInto[p.id] ? (
+                  <div className="mx-3 mb-2 rounded-xl border border-amber-300 bg-amber-50 p-2 text-xs">
+                    <p className="font-semibold text-amber-900">⚠ Looks like the same player as {mergeInto[p.id].name}.</p>
+                    <p className="mt-0.5 text-amber-800">Merge keeps {mergeInto[p.id].name}, moves this one&rsquo;s parent across, and <b>no one loses access</b>.</p>
+                    <form action={mergePlayers} className="mt-1.5">
+                      <input type="hidden" name="dup" value={p.id} />
+                      <input type="hidden" name="keep" value={mergeInto[p.id].id} />
+                      <ConfirmButton message={`Merge ${p.first_name} ${p.last_name} into ${mergeInto[p.id].name}? Both parents keep access; this duplicate is removed.`} className="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white">Merge them</ConfirmButton>
+                    </form>
+                  </div>
+                ) : isDup ? (
+                  <div className="mx-3 mb-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">⚠ Possible duplicate name — check Contacts &amp; details.</div>
+                ) : null}
                 <details className="border-t border-slate-100">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600">Contacts &amp; details</summary>
                   <div className="space-y-2 px-3 pb-3 text-sm">

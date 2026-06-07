@@ -58,12 +58,20 @@ async function resolveToken(
   token: string
 ): Promise<{ player: Player; team: Team } | null> {
   const admin = createAdminClient();
-  const { data: player } = await admin
+  let { data: player } = await admin
     .from("players")
     .select("*")
     .eq("access_token", token)
     .maybeSingle();
-  if (!player) return null;
+  if (!player) {
+    const { followToken } = await import("@/lib/accessmap");
+    const mapped = await followToken(token);
+    if (mapped) {
+      const r = await admin.from("players").select("*").eq("access_token", mapped).maybeSingle();
+      player = r.data;
+    }
+    if (!player) return null;
+  }
   const { data: team } = await admin
     .from("teams")
     .select("*")

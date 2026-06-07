@@ -200,3 +200,39 @@ export async function resetAccessToken(formData: FormData) {
   revalidatePath("/team/roster");
   redirect("/team/roster?saved=" + encodeURIComponent("New parent link created — old links no longer work"));
 }
+
+// Merge any two players (incl. already-joined). Moves both parents' guardians onto the
+// kept player, preserves access via a token redirect (no parent gets locked out), deletes the dup.
+export async function mergePlayers(formData: FormData) {
+  const { team } = await requireCoachTeam();
+  const db = createAdminClient();
+  const dupId = s(formData, "dup");
+  const keepId = s(formData, "keep");
+  if (!dupId || !keepId || dupId === keepId) redirect("/team/roster");
+  const { data: dup } = await db.from("players").select("*").eq("id", dupId).eq("team_id", team.id).maybeSingle();
+  const { data: keep } = await db.from("players").select("*").eq("id", keepId).eq("team_id", team.id).maybeSingle();
+  if (!dup || !keep) redirect("/team/roster");
+  const D = dup as Record<string, unknown>; const K = keep as Record<string, unknown>;
+
+  const upd: Record<string, unknown> = {};
+  if (D.claimed || K.claimed) upd.claimed = true;
+  for (const k of ["allergies", "medical_notes", "emergency_contact_name", "emergency_contact_phone"]) if (!K[k] && D[k]) upd[k] = D[k];
+  for (const k of ["jersey_number", "preferred_position", "strong_foot", "strength"]) if (!K[k] && D[k]) upd[k] = D[k];
+  if (Object.keys(upd).length) await db.from("players").update(upd).eq("id", keepId).eq("team_id", team.id);
+
+  // move dup's guardians to keep (skip exact phone dupes)
+  const { data: kg } = await db.from("guardians").select("phone").eq("player_id", keepId);
+  const have = new Set((kg ?? []).map((g: { phone: string | null }) => g.phone).filter(Boolean));
+  const { data: dg } = await db.from("guardians").select("id, phone").eq("player_id", dupId);
+  for (const g of (dg ?? []) as { id: string; phone: string | null }[]) {
+    if (g.phone && have.has(g.phone)) continue;
+    await db.from("guardians").update({ player_id: keepId }).eq("id", g.id);
+  }
+  // keep the dup's parents signed in: their old link/token now resolves to the kept player
+  const { mapToken } = await import("@/lib/accessmap");
+  if (D.access_token && K.access_token) await mapToken(D.access_token as string, K.access_token as string);
+
+  await db.from("players").delete().eq("id", dupId).eq("team_id", team.id);
+  revalidatePath("/team/roster");
+  redirect("/team/roster?saved=" + encodeURIComponent("Merged — both parents keep access"));
+}
