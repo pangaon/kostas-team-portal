@@ -86,6 +86,26 @@ export async function joinTeam(
     }
   }
 
+  // Same kid by exact name? (second parent typing the same name) — attach instead of duplicating.
+  {
+    const fn = v.player_first_name.trim().toLowerCase();
+    const ln = v.player_last_name.trim().toLowerCase();
+    const { data: roster } = await db.from("players").select("*").eq("team_id", teamId);
+    const match = (roster ?? []).find((p: { first_name: string; last_name: string }) =>
+      p.first_name.trim().toLowerCase() === fn && p.last_name.trim().toLowerCase() === ln);
+    if (match) {
+      const E = match as Record<string, unknown> & { id: string; access_token: string };
+      const upd: Record<string, unknown> = { claimed: true };
+      for (const [k, val] of [["allergies", v.allergies], ["medical_notes", v.medical_notes], ["emergency_contact_name", v.emergency_contact_name], ["emergency_contact_phone", v.emergency_contact_phone]] as const) {
+        if (val && String(val).trim()) upd[k] = val;
+      }
+      await db.from("players").update(upd).eq("id", E.id);
+      if (v.g1_name) await db.from("guardians").insert({ player_id: E.id, team_id: teamId, name: v.g1_name, phone: nullable(v.g1_phone ?? ""), email: nullable(v.g1_email ?? ""), is_primary: false, relationship: "Parent/Guardian" });
+      addChildCookie(E.access_token);
+      redirect(`/join/${inviteCode}/success`);
+    }
+  }
+
   const { data: playerRow, error: playerErr } = await db
     .from("players")
     .insert({
