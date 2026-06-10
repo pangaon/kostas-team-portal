@@ -1,5 +1,5 @@
 import { requireCoachTeam } from "@/lib/auth";
-import { getEvents } from "@/lib/data";
+import { getEvents, getSnacks, getPlayers } from "@/lib/data";
 import { Card, PageTitle, SectionTitle, Badge, Button, EmptyState, Field } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
@@ -84,7 +84,7 @@ function EventForm({ event }: { event?: TeamEvent }) {
   );
 }
 
-function EventCard({ event }: { event: TeamEvent }) {
+function EventCard({ event, snack }: { event: TeamEvent; snack?: string }) {
   const title = event.title || (event.opponent ? `vs ${event.opponent}` : EVENT_TYPE_LABEL[event.type]);
   return (
     <Card>
@@ -105,6 +105,7 @@ function EventCard({ event }: { event: TeamEvent }) {
               )}
             </p>
           )}
+          {snack && <p className="mt-1 text-sm text-slate-500">{snack}</p>}
           {event.notes && <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{event.notes}</p>}
         </div>
       </div>
@@ -134,7 +135,15 @@ function EventCard({ event }: { event: TeamEvent }) {
 
 export default async function SchedulePage({ searchParams }: { searchParams: { edit?: string; add?: string } }) {
   const { team } = await requireCoachTeam();
-  const events = await getEvents(team.id);
+  const [events, snacks, players] = await Promise.all([getEvents(team.id), getSnacks(team.id), getPlayers(team.id)]);
+  const playerById = new Map(players.map((p) => [p.id, p]));
+  const snackByEvent = new Map(snacks.map((sn) => [sn.event_id, sn]));
+  const snackLabel = (e: TeamEvent): string | undefined => {
+    if (e.type !== "game" && e.type !== "tournament") return undefined;
+    const sn = snackByEvent.get(e.id);
+    const who = sn && sn.player_id ? playerById.get(sn.player_id) : undefined;
+    return who ? `🍎 Snacks: ${who.first_name}${sn?.snack_notes ? ` (${sn.snack_notes})` : ""}` : "🍎 Snacks: open";
+  };
   const now = Date.now();
   const upcoming = events.filter((e) => new Date(e.start_time).getTime() >= now);
   const past = events
@@ -165,13 +174,13 @@ export default async function SchedulePage({ searchParams }: { searchParams: { e
                 {upcoming.length === 0 ? (
                   <EmptyState title="No upcoming events" hint="Add a game or practice." />
                 ) : (
-                  <div className="space-y-3">{upcoming.map((e) => <EventCard key={e.id} event={e} />)}</div>
+                  <div className="space-y-3">{upcoming.map((e) => <EventCard key={e.id} event={e} snack={snackLabel(e)} />)}</div>
                 )}
               </div>
               {past.length > 0 && (
                 <div>
                   <SectionTitle>Past</SectionTitle>
-                  <div className="space-y-3 opacity-80">{past.map((e) => <EventCard key={e.id} event={e} />)}</div>
+                  <div className="space-y-3 opacity-80">{past.map((e) => <EventCard key={e.id} event={e} snack={snackLabel(e)} />)}</div>
                 </div>
               )}
             </div>

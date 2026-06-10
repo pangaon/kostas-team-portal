@@ -5,7 +5,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { fmtDateTime } from "@/lib/format";
 import { EVENT_TYPE_LABEL } from "@/lib/types";
 import type { Player } from "@/lib/types";
-import { assignSnack, clearSnack } from "./actions";
+import { assignSnack, clearSnack, remindSnack } from "./actions";
 
 export default async function SnacksPage() {
   const { team } = await requireCoachTeam();
@@ -87,7 +87,12 @@ ${withAllergies.length ? "Allergy reminder: " + withAllergies.map((p) => `${p.fi
                     </form>
                   </div>
                 ) : (
-                  <form action={assignSnack} className="mt-3 space-y-2">
+                  <>
+                  <form action={remindSnack} className="mt-3">
+                    <input type="hidden" name="event_id" value={e.id} />
+                    <Button type="submit" variant="secondary">📣 Remind team — snacks needed</Button>
+                  </form>
+                  <form action={assignSnack} className="mt-2 space-y-2">
                     <input type="hidden" name="event_id" value={e.id} />
                     <select name="player_id" required className="input">
                       <option value="">Assign a player…</option>
@@ -98,6 +103,7 @@ ${withAllergies.length ? "Allergy reminder: " + withAllergies.map((p) => `${p.fi
                     <input name="snack_notes" placeholder="What they're bringing (optional)" className="input" />
                     <Button type="submit">Assign</Button>
                   </form>
+                  </>
                 )}
               </Card>
             );
