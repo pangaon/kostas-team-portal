@@ -32,7 +32,13 @@ export async function createTeam(formData: FormData) {
 
 export async function sendTestAlert() {
   const { team } = await requireCoachTeam();
-  await notifyTeam(team.id, { title: "✅ Test alert", body: "If you see this, alerts are working!", url: "/dashboard" });
+  const r = await notifyTeam(team.id, { title: "✅ Test alert", body: "If you see this, alerts are working!", url: "/dashboard" });
+  const msg = r.skipped
+    ? `Not sent — ${r.skipped}`
+    : r.sent > 0
+    ? `Sent to ${r.sent} device${r.sent === 1 ? "" : "s"} ✓`
+    : "0 devices have alerts on yet. Tap “Enable alerts” here first (and have parents do the same in their app). On iPhone the app must be added to the Home Screen.";
+  redirect("/dashboard?saved=" + encodeURIComponent(msg));
 }
 
 export async function sendTodayReminders() {
