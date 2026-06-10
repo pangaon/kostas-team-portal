@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getParentSession } from "@/lib/parent";
 import { getCoachTeam } from "@/lib/auth";
 import { ParentBottomNav } from "@/components/ParentBottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function ParentLayout({ children }: { children: ReactNode }) {
   const session = await getParentSession();
@@ -36,7 +37,7 @@ export default async function ParentLayout({ children }: { children: ReactNode }
           ← Back to coach view
         </Link>
       )}
-      <div className="mx-auto max-w-md px-4 pb-24 pt-4">{children}</div>
+      <div className="mx-auto max-w-md px-4 pb-24 pt-4"><div className="mb-2 flex justify-end"><ThemeToggle className="text-xs text-slate-400" /></div>{children}</div>
       <ParentBottomNav />
     </>
   );

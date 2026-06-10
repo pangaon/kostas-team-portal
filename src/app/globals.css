@@ -47,3 +47,18 @@ button:active, a:active { transform: scale(.985); }
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* ---- Dark mode (class strategy; overrides common surfaces) ---- */
+.dark body { background-color: #0b1120; color: #e5e7eb; }
+.dark .bg-white { background-color: #111827 !important; }
+.dark .bg-slate-50 { background-color: #0e1626 !important; }
+.dark .bg-slate-100 { background-color: #1f2937 !important; }
+.dark .bg-slate-200\/70, .dark .skeleton { background-color: #1f2937 !important; }
+.dark .text-ink, .dark .text-slate-900, .dark .text-slate-800 { color: #e5e7eb !important; }
+.dark .text-slate-700, .dark .text-slate-600, .dark .text-ink-soft { color: #cbd5e1 !important; }
+.dark .text-slate-500, .dark .text-slate-400, .dark .text-ink-muted, .dark .text-ink-faint { color: #94a3b8 !important; }
+.dark .border-slate-200, .dark .border-slate-100, .dark .border-slate-300, .dark .border-slate-200\/80 { border-color: #334155 !important; }
+.dark .card { background-color: #111827; border-color: #334155; }
+.dark .input { background-color: #1f2937; border-color: #334155; color: #e5e7eb; }
+.dark .btn-ghost { background-color: #1f2937; border-color: #334155; color: #cbd5e1; }
+.dark .shadow-card, .dark .shadow-lift { box-shadow: 0 1px 3px rgba(0,0,0,.5); }

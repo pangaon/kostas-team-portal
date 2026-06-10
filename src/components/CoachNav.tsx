@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { TeamSwitcher } from "@/components/TeamSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const primary = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
@@ -75,6 +76,7 @@ export function CoachNav({ teamName, teams, currentId }: { teamName: string; tea
           <div className="absolute inset-0 bg-slate-900/40" style={{ animation: "fadeUp .2s ease both" }} />
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-24 shadow-2xl" style={{ animation: "fadeUp .25s ease both" }} onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" />
+            <div className="mb-3 flex justify-center"><ThemeToggle /></div>
             <div className="grid grid-cols-3 gap-3">
               {more.map((m) => {
                 const active = m.href !== "/parent" && path.startsWith(m.href);

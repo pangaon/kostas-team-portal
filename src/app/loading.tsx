@@ -1,7 +1,11 @@
 export default function Loading() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand-600" />
+    <div className="mx-auto max-w-3xl space-y-4 px-4 pt-6">
+      <div className="skeleton h-7 w-40 rounded-lg" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
+      </div>
+      {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
     </div>
   );
 }
