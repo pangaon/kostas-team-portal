@@ -12,11 +12,14 @@ import { createTeam, sendTestAlert, sendTodayReminders } from "./actions";
 import { CoachPushControls } from "@/components/CoachPushControls";
 import { Onboarding } from "@/components/Onboarding";
 import { Hint } from "@/components/Hint";
+import { sportFromString } from "@/lib/sports";
 
 export default async function Dashboard({ searchParams }: { searchParams: { new?: string; saved?: string; setup?: string } }) {
   const { team } = await getCoachTeam();
   const showCreate = !team || searchParams?.new === "1";
   const origin = originFromEnv();
+  const sport = team ? sportFromString(team.sport) : null;
+  const gnoun = sport ? sport.noun.charAt(0).toUpperCase() + sport.noun.slice(1) : "Game";
 
   if (showCreate) {
     return (
@@ -88,7 +91,7 @@ export default async function Dashboard({ searchParams }: { searchParams: { new?
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat href="/team/roster" label="Players" value={approved.length} hint={pending.length ? `${pending.length} pending approval` : "tap to manage"} />
         <Stat href="/team/schedule" label="Events" value={events.length} hint="games & practices" />
-        <Stat href={next ? `/event/${next.id}` : "/team/schedule"} label="Next game" value={next ? shortDate(next.start_time) : "—"} hint={next ? `${counts.in} in · ${noReply} awaiting RSVP` : "none scheduled"} />
+        <Stat href={next ? `/event/${next.id}` : "/team/schedule"} label={`Next ${gnoun.toLowerCase()}`} value={next ? shortDate(next.start_time) : "—"} hint={next ? `${counts.in} in · ${noReply} awaiting RSVP` : "none scheduled"} />
         <Stat href="/team/snacks" label="Snack" value={next ? (nextSnack ? "Claimed ✓" : "Open") : "—"} hint={next && !nextSnack ? "needs a volunteer" : "tap to view"} />
       </div>
 

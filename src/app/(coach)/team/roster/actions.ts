@@ -228,6 +228,19 @@ export async function mergePlayers(formData: FormData) {
     if (g.phone && have.has(g.phone)) continue;
     await db.from("guardians").update({ player_id: keepId }).eq("id", g.id);
   }
+  // carry the dup's goal/assist stats to the kept player
+  await db.from("goal_events").update({ player_id: keepId }).eq("player_id", dupId).eq("team_id", team.id);
+  await db.from("goal_events").update({ assist_player_id: keepId }).eq("assist_player_id", dupId).eq("team_id", team.id);
+
+  // carry storage artifacts (photo, skills/notes, intake, payment) if the kept player lacks them
+  for (const bucket of ["avatars", "playerprofiles", "parentintake", "payments"]) {
+    try {
+      const { data: objs } = await db.storage.from(bucket).list("", { limit: 1000 });
+      const names = new Set((objs ?? []).map((o) => o.name));
+      if (names.has(dupId) && !names.has(keepId)) await db.storage.from(bucket).copy(dupId, keepId);
+    } catch {}
+  }
+
   // keep the dup's parents signed in: their old link/token now resolves to the kept player
   const { mapToken } = await import("@/lib/accessmap");
   if (D.access_token && K.access_token) await mapToken(D.access_token as string, K.access_token as string);
