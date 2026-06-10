@@ -93,7 +93,7 @@ export async function POST(req: Request) {
       const cur = await readGameState(eventId);
       const curW = (cur?.writtenAt as number) ?? 0;
       const inW = (incoming.writtenAt as number) ?? 0;
-      if (!cur || inW >= curW) await writeGameState(eventId, incoming);
+      if (!cur || inW >= curW) await writeGameState(eventId, team.id, incoming);
       return NextResponse.json({ ok: true, applied: !cur || inW >= curW });
     }
     default:

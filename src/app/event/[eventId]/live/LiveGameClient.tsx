@@ -1,4 +1,5 @@
 "use client";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 import Link from "next/link";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Undo2, X, Timer } from "lucide-react";
@@ -95,13 +96,21 @@ export function LiveGameClient(props: {
   useEffect(() => {
     let alive = true;
     (async () => { const r = await post("stateGet", {}); if (alive && r?.state) applyState(r.state); })();
-    const poll = setInterval(async () => {
-      if (document.visibilityState !== "visible") return;
+    const pull = async () => {
       const r = await post("stateGet", {});
       const w = r?.state?.writtenAt as number | undefined;
       if (w && w > lastWrittenRef.current) applyState(r.state);
-    }, 10000);
-    return () => { alive = false; clearInterval(poll); };
+    };
+    // Realtime: push updates instantly when another device writes game_state.
+    const sb = supabaseBrowser();
+    const ch = sb
+      ? sb.channel(`gs:${eventId}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "game_state", filter: `event_id=eq.${eventId}` }, () => { if (alive) pull(); })
+          .subscribe()
+      : null;
+    // Safety-net poll (covers Realtime gaps / storage fallback before migration).
+    const poll = setInterval(() => { if (document.visibilityState === "visible") pull(); }, ch ? 15000 : 8000);
+    return () => { alive = false; clearInterval(poll); if (ch && sb) sb.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
