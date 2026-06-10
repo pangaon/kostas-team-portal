@@ -208,15 +208,22 @@ export async function getTeamsByIds(ids: string[]): Promise<Team[]> {
 
 export type StandingRow = { teamId: string; name: string; played: number; w: number; d: number; l: number; gf: number; ga: number; pts: number };
 export async function leagueStandings(teamIds: string[]): Promise<StandingRow[]> {
-  const teams = await getTeamsByIds(teamIds);
-  const rows = await Promise.all(teams.map(async (t) => {
-    const results = await getResults(t.id);
-    let w = 0, d = 0, l = 0, gf = 0, ga = 0;
-    for (const r of results) {
-      gf += r.our_score; ga += r.opp_score;
-      if (r.our_score > r.opp_score) w++; else if (r.our_score === r.opp_score) d++; else l++;
-    }
-    return { teamId: t.id, name: t.name, played: w + d + l, w, d, l, gf, ga, pts: w * 3 + d };
-  }));
-  return rows.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+  if (!teamIds.length) return [];
+  const a = createAdminClient();
+  const [teams, resp] = await Promise.all([
+    getTeamsByIds(teamIds),
+    a.from("match_results").select("team_id, our_score, opp_score").in("team_id", teamIds),
+  ]);
+  const results = (resp.data as { team_id: string; our_score: number; opp_score: number }[]) ?? [];
+  const acc = new Map<string, { w: number; d: number; l: number; gf: number; ga: number }>();
+  for (const t of teams) acc.set(t.id, { w: 0, d: 0, l: 0, gf: 0, ga: 0 });
+  for (const r of results) {
+    const x = acc.get(r.team_id); if (!x) continue;
+    x.gf += r.our_score; x.ga += r.opp_score;
+    if (r.our_score > r.opp_score) x.w++; else if (r.our_score === r.opp_score) x.d++; else x.l++;
+  }
+  return teams.map((t) => {
+    const x = acc.get(t.id)!;
+    return { teamId: t.id, name: t.name, played: x.w + x.d + x.l, w: x.w, d: x.d, l: x.l, gf: x.gf, ga: x.ga, pts: x.w * 3 + x.d };
+  }).sort((p, q) => q.pts - p.pts || (q.gf - q.ga) - (p.gf - p.ga));
 }

@@ -228,9 +228,14 @@ export async function mergePlayers(formData: FormData) {
     if (g.phone && have.has(g.phone)) continue;
     await db.from("guardians").update({ player_id: keepId }).eq("id", g.id);
   }
-  // carry the dup's goal/assist stats to the kept player
+  // carry the dup's goal/assist stats, chat history and notification device to the kept player
   await db.from("goal_events").update({ player_id: keepId }).eq("player_id", dupId).eq("team_id", team.id);
   await db.from("goal_events").update({ assist_player_id: keepId }).eq("assist_player_id", dupId).eq("team_id", team.id);
+  await db.from("coach_inbox").update({ player_id: keepId }).eq("player_id", dupId).eq("team_id", team.id);
+  await db.from("push_subscriptions").update({ player_id: keepId }).eq("player_id", dupId).eq("team_id", team.id);
+  // drop the dup's redundant per-event rows (the kept player's are canonical)
+  await db.from("attendance").delete().eq("player_id", dupId);
+  await db.from("game_roster").delete().eq("player_id", dupId).eq("team_id", team.id);
 
   // carry storage artifacts (photo, skills/notes, intake, payment) if the kept player lacks them
   for (const bucket of ["avatars", "playerprofiles", "parentintake", "payments"]) {

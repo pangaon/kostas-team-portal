@@ -157,13 +157,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { edi
       return a.first_name.localeCompare(b.first_name);
     });
 
-  const approvedA = await withAvatars(approved);
-  const profilesByPlayer = await readProfiles(approvedA.map((p) => p.id));
-  const intakeByPlayer = await readIntakes(approvedA.map((p) => p.id));
   const origin = originFromEnv();
-  const teamRules = await readTeamRules(team.id);
+  const _ids = approved.map((p) => p.id);
+  const [approvedA, profilesByPlayer, intakeByPlayer, teamRules] = await Promise.all([
+    withAvatars(approved), readProfiles(_ids), readIntakes(_ids), readTeamRules(team.id),
+  ]);
   const feeOn = (teamRules.feeCents ?? 0) > 0;
-  const paid = feeOn ? await paidSet(approvedA.map((p) => p.id)) : new Set<string>();
+  const paid = feeOn ? await paidSet(_ids) : new Set<string>();
   const norm = (x: string) => (x ?? "").toLowerCase().replace(/[^a-z]/g, "");
   const contactsOf = (pl: PlayerWithGuardians) => new Set(pl.guardians.flatMap((g) => [g.phone, g.email].filter(Boolean)).map((x) => String(x).toLowerCase()));
   const mergeInto: Record<string, { id: string; name: string }> = {};
