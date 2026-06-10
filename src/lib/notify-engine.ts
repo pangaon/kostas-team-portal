@@ -63,7 +63,12 @@ export async function runAutoNotifications(onlyTeamId?: string): Promise<EngineR
     const parts: string[] = [fmtTime(ev.start_time)];
     if (ev.location) parts.push(`at ${ev.location}${ev.field_number ? " #" + ev.field_number : ""}`);
     if (ev.arrival_time) parts.push(`be there by ${fmtTime(ev.arrival_time)}`);
-    const body = parts.join(" · ");
+    let snackNote = "";
+    if (isGame) {
+      const { data: sn } = await admin.from("snack_signups").select("id").eq("event_id", ev.id).limit(1);
+      if (!sn || !sn.length) snackNote = " · 🍎 snacks still need a volunteer!";
+    }
+    const body = parts.join(" · ") + snackNote;
 
     await admin.from("notifications").insert({
       team_id: ev.team_id,
