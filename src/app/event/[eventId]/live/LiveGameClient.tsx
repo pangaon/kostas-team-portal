@@ -230,6 +230,19 @@ export function LiveGameClient(props: {
     await fetch("/api/player", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "note", playerId: id, text: t }) }).catch(() => {});
   };
   const addNote = async () => { const t = noteText.trim(); if (!t) return; const stamped = secInHalf > 0 ? `H${half} ${fmtMin(secInHalf)} ${t}` : t; setNoteText(""); const res = await post("note", { note: stamped }); setNotes((n) => [...n, res?.line ?? stamped]); };
+  const evenUpMinutes = async () => {
+    const offAvail = [...onField].filter((p) => !pendingOut.has(p.id)).sort((a, b) => liveMins(b.id) - liveMins(a.id));
+    const inAvail = benchByMins.filter((p) => !pendingIn.has(p.id));
+    const n = Math.min(3, offAvail.length, inAvail.length);
+    for (let i = 0; i < n; i++) {
+      const out = offAvail[i], inp = inAvail[i];
+      if (liveMins(inp.id) >= liveMins(out.id)) break; // already fair
+      const tmp = "tmp-" + Math.random().toString(36).slice(2);
+      setSubs((s) => [...s, { id: tmp, player_in: inp.id, player_out: out.id, saved: false }]);
+      const res = await post("planSub", { player_in: inp.id, player_out: out.id });
+      if (res?.id) setSubs((s) => s.map((x) => (x.id === tmp ? { ...x, id: res.id, saved: true } : x)));
+    }
+  };
   const planSub = async () => {
     if (!outSel || !inSel || outSel === inSel) return;
     const tmp = "tmp-" + Math.random().toString(36).slice(2);
@@ -393,6 +406,7 @@ export function LiveGameClient(props: {
 
       {/* Subs */}
       <Section title="Sub plan — get them ready 🔁" />
+      <button onClick={evenUpMinutes} className="btn-ghost mb-2 w-full">⚖️ Even up minutes — auto-queue the fairest subs</button>
       {subs.length > 0 && (
         <div className="mb-2 space-y-2">
           {subs.map((sp) => (

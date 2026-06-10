@@ -20,6 +20,15 @@ export function CoachPushControls() {
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
     setIos(isIos && !standalone);
+    const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (typeof Notification !== "undefined" && Notification.permission === "granted" && vapid && "serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then(async (reg) => {
+        try {
+          const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(vapid) as BufferSource });
+          await saveCoachPushSubscription(sub.toJSON() as any, navigator.userAgent);
+        } catch {}
+      });
+    }
   }, []);
 
   if (!VAPID) return <p className="text-sm text-slate-500">Alerts aren&apos;t configured.</p>;

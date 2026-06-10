@@ -34,6 +34,15 @@ export function PushControls() {
       setStandalone(!!sa);
       if (typeof Notification !== "undefined") {
         setPerm(Notification.permission);
+        // Already granted? Make sure a subscription is actually saved (stays on by default).
+        if (Notification.permission === "granted" && VAPID && "serviceWorker" in navigator) {
+          navigator.serviceWorker.ready.then(async (reg) => {
+            try {
+              const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID) as BufferSource });
+              await savePushSubscription(sub.toJSON() as any, navigator.userAgent);
+            } catch {}
+          });
+        }
       } else {
         setPerm("unsupported");
       }
