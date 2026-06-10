@@ -229,6 +229,22 @@ export function LiveGameClient(props: {
     if (!t) return;
     await fetch("/api/player", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "note", playerId: id, text: t }) }).catch(() => {});
   };
+  const shareRecap = async () => {
+    const scorers = goals.filter((g) => g.player_id).map((g) => { const p = byId(g.player_id); return `${p ? p.first_name : "?"}${g.minute ? ` ${g.minute}'` : ""}`; });
+    const mins = [...players].map((p) => ({ n: p.first_name, m: Math.round(liveMins(p.id) / 60) })).filter((x) => x.m > 0).sort((a, b) => b.m - a.m);
+    const result = us > them ? "win" : us < them ? "loss" : "draw";
+    const lines = [
+      `${props.teamName} ${us}–${them} ${props.opponent || "opponents"} (${result})`,
+      scorers.length ? `⚽ ${scorers.join(", ")}` : "",
+      mins.length ? `⏱️ Minutes: ${mins.map((x) => `${x.n} ${x.m}'`).join(", ")}` : "",
+      `— shared from Badoni`,
+    ].filter(Boolean);
+    const text = lines.join("\n");
+    try {
+      if (navigator.share) await navigator.share({ title: `${props.teamName} game recap`, text });
+      else { await navigator.clipboard.writeText(text); alert("Recap copied — paste it anywhere."); }
+    } catch {}
+  };
   const addNote = async () => { const t = noteText.trim(); if (!t) return; const stamped = secInHalf > 0 ? `H${half} ${fmtMin(secInHalf)} ${t}` : t; setNoteText(""); const res = await post("note", { note: stamped }); setNotes((n) => [...n, res?.line ?? stamped]); };
   const evenUpMinutes = async () => {
     const offAvail = [...onField].filter((p) => !pendingOut.has(p.id)).sort((a, b) => liveMins(b.id) - liveMins(a.id));
@@ -267,7 +283,7 @@ export function LiveGameClient(props: {
       <div className="sticky top-0 z-30 -mx-4 mb-4 rounded-b-3xl bg-gradient-to-b from-slate-900 to-slate-800 px-4 pb-4 pt-4 text-white shadow-xl">
         <div className="flex items-center justify-between text-xs">
           <Link href="/dashboard" className="font-semibold text-slate-300">← Exit</Link>
-          <span className="chip bg-emerald-500/20 text-emerald-300">● LIVE</span>
+          <div className="flex items-center gap-2"><button onClick={shareRecap} className="chip bg-white/15 text-white">📋 Recap</button><span className="chip bg-emerald-500/20 text-emerald-300">● LIVE</span></div>
         </div>
         <p className="mt-1 truncate text-center text-xs text-slate-400">{props.title} · {props.when}</p>
         <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
