@@ -20,7 +20,11 @@ export async function writeIntake(playerId: string, intake: ParentIntake): Promi
 }
 export function intakeEmpty(i: ParentIntake): boolean { return !(i.about || i.asPlayer || i.helpMe); }
 export async function readIntakes(ids: string[]): Promise<Record<string, ParentIntake>> {
+  if (!ids.length) return {};
+  const a = await ensure();
+  let present = new Set<string>();
+  try { const { data } = await a.storage.from(BUCKET).list("", { limit: 1000 }); present = new Set((data ?? []).map((o) => o.name)); } catch {}
   const out: Record<string, ParentIntake> = {};
-  await Promise.all(ids.map(async (id) => { const i = await readIntake(id); if (!intakeEmpty(i)) out[id] = i; }));
+  await Promise.all(ids.filter((id) => present.has(id)).map(async (id) => { const i = await readIntake(id); if (!intakeEmpty(i)) out[id] = i; }));
   return out;
 }

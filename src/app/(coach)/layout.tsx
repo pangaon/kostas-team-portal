@@ -1,4 +1,4 @@
-import { getCoachTeam, listCoachTeams, requireUser } from "@/lib/auth";
+import { listCoachTeams, requireUser, pickCurrentTeam } from "@/lib/auth";
 import { Suspense } from "react";
 import { CoachNav } from "@/components/CoachNav";
 import { SaveToast } from "@/components/SaveToast";
@@ -6,7 +6,7 @@ import { SaveToast } from "@/components/SaveToast";
 export default async function CoachLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const teams = await listCoachTeams(user);
-  const { team } = await getCoachTeam();
+  const team = pickCurrentTeam(teams);
   return (
     <div className="min-h-screen">
       <Suspense>{<SaveToast />}</Suspense>

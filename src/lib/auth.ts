@@ -51,6 +51,13 @@ async function resolveCoachTeam(user: { id: string; email?: string | null }): Pr
   return teams[0];
 }
 
+export function pickCurrentTeam(teams: Team[]): Team | null {
+  if (!teams.length) return null;
+  const selected = cookies().get(TEAM_COOKIE)?.value;
+  if (selected) { const m = teams.find((t) => t.id === selected); if (m) return m; }
+  return teams[0];
+}
+
 export async function requireCoachTeam(): Promise<{ userId: string; team: Team }> {
   const user = await requireUser();
   const team = await resolveCoachTeam(user);

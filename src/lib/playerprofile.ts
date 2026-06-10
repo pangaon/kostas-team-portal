@@ -25,7 +25,12 @@ export async function appendNote(playerId: string, text: string): Promise<void> 
   await writePlayerProfile(playerId, p);
 }
 export async function readProfiles(ids: string[]): Promise<Record<string, PlayerProfile>> {
+  if (!ids.length) return {};
+  const a = await ensure();
+  let present = new Set<string>();
+  try { const { data } = await a.storage.from(BUCKET).list("", { limit: 1000 }); present = new Set((data ?? []).map((o) => o.name)); } catch {}
+  const wanted = ids.filter((id) => present.has(id));
   const out: Record<string, PlayerProfile> = {};
-  await Promise.all(ids.map(async (id) => { const p = await readPlayerProfile(id); if (p.skills?.length || p.notes?.length) out[id] = p; }));
+  await Promise.all(wanted.map(async (id) => { const p = await readPlayerProfile(id); if (p.skills?.length || p.notes?.length) out[id] = p; }));
   return out;
 }
