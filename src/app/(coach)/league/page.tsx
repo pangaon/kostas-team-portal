@@ -1,5 +1,5 @@
 import { requireUser, listCoachTeams } from "@/lib/auth";
-import { getOrgForOwner } from "@/lib/orgs";
+import { getOrgForOwner, orgTeamIds } from "@/lib/orgs";
 import { leagueStandings, originFromEnv } from "@/lib/data";
 import { PageTitle, Card, SectionTitle, Button, EmptyState } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
@@ -40,8 +40,9 @@ export default async function LeaguePage() {
     );
   }
 
+  const allTeamIds = await orgTeamIds(org);
   const inLeague = new Set(org.teamIds);
-  const standings = await leagueStandings(org.teamIds);
+  const standings = await leagueStandings(allTeamIds);
   const publicUrl = `${originFromEnv()}/l/${org.code}`;
 
   return (

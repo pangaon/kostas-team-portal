@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Team } from "@/lib/types";
@@ -14,7 +15,7 @@ export async function requireUser() {
 }
 
 // All teams a coach owns or is an active member of (auto-claims email invites first).
-export async function listCoachTeams(user: { id: string; email?: string | null }): Promise<Team[]> {
+export const listCoachTeams = cache(async function listCoachTeamsImpl(user: { id: string; email?: string | null }): Promise<Team[]> {
   const admin = createAdminClient();
   if (user.email) {
     await admin.from("team_members")
@@ -36,7 +37,7 @@ export async function listCoachTeams(user: { id: string; email?: string | null }
     memberTeams = (t as Team[]) ?? [];
   }
   return [...ownedTeams, ...memberTeams];
-}
+});
 
 // Resolve the coach's CURRENT team: the one selected via cookie (if they still
 // have access to it), otherwise their first team.

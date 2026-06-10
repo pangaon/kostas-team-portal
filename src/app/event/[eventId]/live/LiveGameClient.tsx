@@ -175,7 +175,7 @@ export function LiveGameClient(props: {
     if (side === "us") { const v = Math.max(0, us + delta); setUs(v); post("score", { side, value: v }); }
     else { const v = Math.max(0, them + delta); setThem(v); post("score", { side, value: v }); }
   };
-  const curMinute = Math.floor((half - 1) * (sport.timed ? halfLen : 0) * 60 + secInHalf) / 60;
+  const curMinute = Math.floor(((half - 1) * (sport.timed ? halfLen : 0) * 60 + secInHalf) / 60);
   const logGoal = async (player_id: string | null) => {
     const tmp = "tmp-" + Math.random().toString(36).slice(2);
     const minute = running || secInHalf > 0 ? Math.floor(curMinute) + 1 : null;

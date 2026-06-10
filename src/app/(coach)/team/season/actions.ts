@@ -3,6 +3,11 @@ import { revalidatePath } from "next/cache";
 import { requireCoachTeam } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+async function eventBelongs(db: ReturnType<typeof createAdminClient>, eventId: string, teamId: string) {
+  const { data } = await db.from("events").select("team_id").eq("id", eventId).maybeSingle();
+  return !!data && (data as { team_id: string }).team_id === teamId;
+}
+
 export async function saveResult(formData: FormData) {
   const { team } = await requireCoachTeam();
   const event_id = String(formData.get("event_id") || "");
@@ -11,6 +16,7 @@ export async function saveResult(formData: FormData) {
   const notes = String(formData.get("notes") || "").trim().slice(0, 5000) || null;
   if (!event_id) return;
   const db = createAdminClient();
+  if (!(await eventBelongs(db, event_id, team.id))) return;
   await db.from("match_results").upsert(
     { team_id: team.id, event_id, our_score, opp_score, notes },
     { onConflict: "event_id" }
@@ -25,6 +31,7 @@ export async function addGoal(formData: FormData) {
   const assist_player_id = String(formData.get("assist_player_id") || "") || null;
   if (!event_id || !player_id) return;
   const db = createAdminClient();
+  if (!(await eventBelongs(db, event_id, team.id))) return;
   await db.from("goal_events").insert({ team_id: team.id, event_id, player_id, assist_player_id });
   revalidatePath("/team/season");
 }

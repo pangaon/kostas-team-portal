@@ -14,6 +14,10 @@ export async function replyToParent(formData: FormData) {
   const playerKey = s(formData, "player");
   const body = s(formData, "body").slice(0, 3000);
   if (!body) redirect(`/team/messages?player=${playerKey}`);
+  if (playerKey !== "general") {
+    const { data: pl } = await db.from("players").select("team_id").eq("id", playerKey).maybeSingle();
+    if (!pl || (pl as { team_id: string }).team_id !== team.id) redirect("/team/messages");
+  }
   await db.from("coach_inbox").insert({
     team_id: team.id,
     player_id: playerKey === "general" ? null : playerKey,

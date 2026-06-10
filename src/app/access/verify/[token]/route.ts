@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: { token: string } 
     return NextResponse.redirect(new URL("/signin?expired=1", req.url));
   }
   const db = createAdminClient();
-  const { data: gs } = await db.from("guardians").select("player_id").ilike("email", rec.email);
+  const { data: gs } = await db.from("guardians").select("player_id").eq("email", rec.email.toLowerCase());
   const ids = [...new Set((gs ?? []).map((g: { player_id: string }) => g.player_id).filter(Boolean))];
   if (ids.length) {
     const { data: players } = await db.from("players").select("access_token").in("id", ids);

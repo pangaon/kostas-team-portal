@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrgByCode } from "@/lib/orgs";
+import { getOrgByCode, orgTeamIds } from "@/lib/orgs";
 import { getTeamsByIds, leagueStandings, originFromEnv } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function PublicLeague({ params }: { params: { code: string } }) {
   const org = await getOrgByCode(params.code);
   if (!org) notFound();
-  const teams = await getTeamsByIds(org.teamIds);
-  const standings = await leagueStandings(org.teamIds);
+  const allIds = await orgTeamIds(org);
+  const teams = await getTeamsByIds(allIds);
+  const standings = await leagueStandings(allIds);
   const origin = originFromEnv();
 
   return (

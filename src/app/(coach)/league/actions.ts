@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { requireUser, listCoachTeams } from "@/lib/auth";
-import { createOrg, getOrgForOwner, getOrgByCode, setOrgTeams, renameOrg } from "@/lib/orgs";
+import { createOrg, getOrgForOwner, getOrgByCode, setOrgTeams, renameOrg, addMemberTeam } from "@/lib/orgs";
 
 export async function createLeague(formData: FormData) {
   const user = await requireUser();
@@ -35,6 +35,6 @@ export async function joinLeagueByCode(formData: FormData) {
   if (!org) redirect("/league?error=" + encodeURIComponent("League code not found"));
   const mine = new Set((await listCoachTeams(user)).map((t) => t.id));
   if (!teamId || !mine.has(teamId)) redirect("/league?error=" + encodeURIComponent("Pick one of your teams"));
-  await setOrgTeams(org!.id, [...org!.teamIds, teamId]);
+  await addMemberTeam(org!.id, teamId);
   redirect("/league?saved=" + encodeURIComponent("Team added to " + org!.name));
 }

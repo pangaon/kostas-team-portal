@@ -9,7 +9,7 @@ export async function requestMagicLink(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!email || !email.includes("@")) redirect("/signin?error=" + encodeURIComponent("Enter a valid email"));
   const db = createAdminClient();
-  const { data: gs } = await db.from("guardians").select("player_id").ilike("email", email);
+  const { data: gs } = await db.from("guardians").select("player_id").eq("email", email);
   let dev = "";
   if (gs && gs.length) {
     const token = crypto.randomUUID();

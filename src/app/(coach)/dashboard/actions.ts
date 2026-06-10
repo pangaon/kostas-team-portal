@@ -57,6 +57,11 @@ export async function sendTodayReminders() {
 
 export async function setCurrentTeam(formData: FormData) {
   const teamId = String(formData.get("teamId") ?? "");
-  if (teamId) cookies().set("coach_team", teamId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  const user = await requireUser();
+  const { listCoachTeams } = await import("@/lib/auth");
+  const teams = await listCoachTeams(user);
+  if (teamId && teams.some((t) => t.id === teamId)) {
+    cookies().set("coach_team", teamId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
+  }
   redirect("/dashboard");
 }

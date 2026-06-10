@@ -89,8 +89,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, state });
     }
     case "stateSet": {
-      await writeGameState(eventId, (p.state ?? {}) as Record<string, unknown>);
-      return NextResponse.json({ ok: true });
+      const incoming = (p.state ?? {}) as Record<string, unknown>;
+      const cur = await readGameState(eventId);
+      const curW = (cur?.writtenAt as number) ?? 0;
+      const inW = (incoming.writtenAt as number) ?? 0;
+      if (!cur || inW >= curW) await writeGameState(eventId, incoming);
+      return NextResponse.json({ ok: true, applied: !cur || inW >= curW });
     }
     default:
       return NextResponse.json({ error: "unknown op" }, { status: 400 });

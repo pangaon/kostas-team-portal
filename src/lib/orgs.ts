@@ -44,6 +44,18 @@ export async function setOrgTeams(id: string, teamIds: string[]): Promise<void> 
   org.teamIds = [...new Set(teamIds)];
   await writeJson(`org/${id}.json`, org);
 }
+export async function addMemberTeam(orgId: string, teamId: string): Promise<void> {
+  const a = await ensure();
+  try { await a.storage.from(BUCKET).upload(`member/${orgId}/${teamId}.json`, Buffer.from("{}"), { upsert: true, contentType: "application/json" }); } catch {}
+}
+export async function listMemberTeams(orgId: string): Promise<string[]> {
+  const a = await ensure();
+  try { const { data } = await a.storage.from(BUCKET).list(`member/${orgId}`, { limit: 1000 }); return (data ?? []).map((o) => o.name.replace(/\.json$/, "")); } catch { return []; }
+}
+export async function orgTeamIds(org: Org): Promise<string[]> {
+  return [...new Set([...(org.teamIds ?? []), ...(await listMemberTeams(org.id))])];
+}
+
 export async function renameOrg(id: string, name: string): Promise<void> {
   const org = await getOrg(id); if (!org) return;
   org.name = name.slice(0, 80);
