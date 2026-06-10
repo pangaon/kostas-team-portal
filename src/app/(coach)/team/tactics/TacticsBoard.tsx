@@ -70,6 +70,14 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans, for
     return (b.strength ?? 0) - (a.strength ?? 0);
   }), [roster, placedIds, attendingIds]);
 
+  const linesByPlayer = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const pl of plans) for (const sl of (pl.slots ?? [])) if (sl.player_id) (m[sl.player_id] ??= []).push(pl.name);
+    return m;
+  }, [plans]);
+  const planPlayers = (pl: LineupPlan) => (pl.slots ?? []).filter((sl) => sl.player_id).map((sl) => { const p = byId(sl.player_id); return p ? `${p.first_name}${p.jersey_number ? " #" + p.jersey_number : ""}` : "?"; });
+  const inAnyLine = new Set(Object.keys(linesByPlayer));
+
   const changeFormation = (f: string) => { setFormation(f); apply(buildSlots(formations, f, slots)); };
 
   const placeAt = (playerId: string, slotIndex: number, fromSlot: number | null) => {
@@ -256,6 +264,7 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans, for
                 </span>
                 <span>{p.jersey_number ? <span className="text-slate-400">#{p.jersey_number} </span> : ""}{p.first_name}</span>
                 {attendingIds.includes(p.id) && <span className="text-emerald-500">✓</span>}
+                {linesByPlayer[p.id]?.length ? <span title={`In lines: ${linesByPlayer[p.id].join(", ")}`} className="rounded bg-violet-100 px-1 text-[9px] font-bold text-violet-700">{linesByPlayer[p.id].length}🅛</span> : null}
               </div>
             ))}
             {bench.length === 0 && <span className="text-sm text-slate-400">Everyone is on the pitch.</span>}
@@ -285,6 +294,24 @@ export function TacticsBoard({ eventId, players, attendingIds, initialPlans, for
                   </span>
                 ))}
               </div>
+
+              <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50">
+                <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-ink">📋 Who&rsquo;s on each line</summary>
+                <div className="space-y-2 px-3 pb-3">
+                  {plans.map((pl) => (
+                    <div key={pl.id}>
+                      <p className="text-xs font-semibold text-brand-700">{pl.name} <span className="text-slate-400">· {planPlayers(pl).length} players</span></p>
+                      <p className="text-sm text-slate-600">{planPlayers(pl).join(", ") || "—"}</p>
+                    </div>
+                  ))}
+                  {roster.filter((p) => !inAnyLine.has(p.id)).length > 0 && (
+                    <div className="border-t border-slate-200 pt-2">
+                      <p className="text-xs font-semibold text-amber-700">Not in any line yet</p>
+                      <p className="text-sm text-slate-600">{roster.filter((p) => !inAnyLine.has(p.id)).map((p) => p.first_name).join(", ")}</p>
+                    </div>
+                  )}
+                </div>
+              </details>
             </div>
           )}
         </div>
