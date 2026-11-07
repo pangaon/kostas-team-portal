@@ -1,5 +1,13 @@
 {
   "crons": [
-    { "path": "/api/cron/notify", "schedule": "0 12 * * *" }
-  ]
+    {
+      "path": "/api/cron/notify",
+      "schedule": "0 12 * * *"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  },
+  "ignoreCommand": "exit 0"
 }
+
